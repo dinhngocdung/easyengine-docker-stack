@@ -47,4 +47,7 @@ commands:
 
 mariadb_databases:
     - name: all
+      hostname: services_global-db_1
+      username: root
+      password: ${MYSQL_ROOT_PASSWORD}
       format: sql
