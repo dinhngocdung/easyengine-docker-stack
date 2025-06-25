@@ -1,5 +1,5 @@
 # Quick Start 
-## 1. Download docker-compose.yml, .env, fail and filter:
+## 1. Download docker-compose.yml, .env, jail and filter:
 ```bash
 mkdir -p ./fail2ban/filter.d/
 mkdir -p ./fail2ban/jail.d/
