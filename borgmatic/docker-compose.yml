@@ -25,6 +25,7 @@ services:
       - BORG_PASSPHRASE=${BORG_PASSPHRASE}
       - HOST_NAME=${HOST_NAME}
       - BORGBASE_REPO_PATH=${BORGBASE_REPO_PATH}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     networks:
       global-backend-network:
 
