@@ -1,0 +1,15 @@
+name: fail2ban
+services:
+  fail2ban:
+    image: crazymax/fail2ban:latest        # Sử dụng image Fail2ban mới nhất
+    container_name: fail2ban               # Tên của container
+    network_mode: "host"                   # Chạy trong chế độ mạng host để giám sát tất cả lưu lượng
+    cap_add:
+      - NET_ADMIN                          # Cấp quyền quản lý mạng
+      - NET_RAW                            # Cấp quyền đọc gói tin thô
+    volumes:
+      - "./data:/data"                     # Chứa jails, actions, filters tùy chỉnh & DB
+      - "/opt/easyengine/services/nginx-proxy/logs:/var/log/nginx-proxy:ro" # Log Nginx proxy
+      - "/opt/easyengine/sites/sample.com/logs/nginx:/var/log/sample.com-nginx:ro" # Log Nginx của site
+      # - "/path/to/another/site/logs:/var/log/another-site-nginx:ro" # Thêm log site khác nếu cần
+    restart: unless-stopped                # Tự động khởi động lại trừ khi bị dừng thủ công

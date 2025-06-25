@@ -1,0 +1,50 @@
+## Config for ${HOST_NAME} 
+
+source_directories:
+    - /mnt/source/easyengine
+    - /mnt/source/volumes
+    - /mnt/source/borgmatic
+    - /mnt/source/fail2ban
+    - /mnt/source/crontab
+
+repositories:
+    - path: ${BORGBASE_REPO_PATH}
+      label: "${HOST_NAME} on BorgBase" 
+
+exclude_patterns:
+    - '*.pyc'
+    - ~/*/.cache
+
+compression: auto,zstd
+archive_name_format: '${HOST_NAME}-{now:%Y-%m-%d-%H%M%S}'
+
+retries: 5
+retry_wait: 5
+
+keep_daily: 30
+keep_weekly: 20
+keep_monthly: 24
+keep_yearly: 10
+
+checks:
+    - name: disabled
+
+check_last: 3
+
+commands:
+    - before: action
+      when: [create]
+      run:
+          - echo "Before create!"
+    - after: action
+      when: [create]
+      states: [finish]
+      run:
+          - echo "After successful create!"
+    - after: error
+      run:
+          - echo "Something went wrong!"
+
+mariadb_databases:
+    - name: all
+      format: sql
