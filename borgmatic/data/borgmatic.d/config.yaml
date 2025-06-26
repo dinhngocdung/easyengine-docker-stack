@@ -51,3 +51,4 @@ mariadb_databases:
       username: root
       password: ${MYSQL_ROOT_PASSWORD}
       format: sql
+      tls: false
