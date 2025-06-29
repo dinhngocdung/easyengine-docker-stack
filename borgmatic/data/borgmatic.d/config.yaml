@@ -1,19 +1,19 @@
-## Config for ${HOST_NAME} 
+## Config for ${HOST_NAME}
 
 source_directories:
-    - /mnt/source/easyengine
-    - /mnt/source/volumes
-    - /mnt/source/borgmatic
-    - /mnt/source/fail2ban
-    - /mnt/source/crontab
+  - /mnt/source/easyengine
+  - /mnt/source/volumes
+  - /mnt/source/borgmatic
+  - /mnt/source/fail2ban
+  - /mnt/source/crontab
 
 repositories:
-    - path: ${BORGBASE_REPO_PATH}
-      label: "${HOST_NAME} on BorgBase" 
+  - path: ${BORGBASE_REPO_PATH}
+    label: "${HOST_NAME} on BorgBase"
 
 exclude_patterns:
-    - '*.pyc'
-    - ~/*/.cache
+  - '*.pyc'
+  - ~/*/.cache
 
 compression: auto,zstd
 archive_name_format: '${HOST_NAME}-{now:%Y-%m-%d-%H%M%S}'
@@ -26,29 +26,46 @@ keep_weekly: 20
 keep_monthly: 24
 keep_yearly: 10
 
-checks:
-    - name: disabled
+read_special: true
 
-check_last: 3
+checks:
+  - name: repository
+    frequency: 1 week
+  - name: archives
+    frequency: 1 month
+
+check_last: 7
 
 commands:
-    - before: action
-      when: [create]
-      run:
-          - echo "Before create!"
-    - after: action
-      when: [create]
-      states: [finish]
-      run:
-          - echo "After successful create!"
-    - after: error
-      run:
-          - echo "Something went wrong!"
+  - before: action
+    when: [create]
+    run:
+      - 'echo "Borgmatic: Starting backup for ${HOST_NAME}..."'
+  - after: action
+    when: [create]
+    states: [finish]
+    run:
+      - 'echo "Borgmatic: Backup for ${HOST_NAME} completed successfully!"'
+
+  - before: action
+    when: [check]
+    run:
+      - 'echo "Borgmatic: Starting consistency checks for ${HOST_NAME}..."'
+  - after: action
+    when: [check]
+    states: [finish]
+    run:
+      - 'echo "Borgmatic: Consistency checks for ${HOST_NAME} completed successfully!"'
+
+  - after: error
+    run:
+      - 'echo "Borgmatic: An error occurred during an operation for ${HOST_NAME}. Please check logs."'
 
 mariadb_databases:
-    - name: all
-      hostname: services_global-db_1
-      username: root
-      password: ${MYSQL_ROOT_PASSWORD}
-      format: sql
-      tls: false
+  - name: all
+    hostname: services_global-db_1
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD}
+    format: sql
+    tls: false
+    options: --compact
