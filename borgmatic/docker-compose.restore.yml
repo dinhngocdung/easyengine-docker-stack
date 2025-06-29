@@ -1,0 +1,39 @@
+services:
+  borgmatic:
+    image: ghcr.io/borgmatic-collective/borgmatic
+    container_name: borg-restore
+    volumes:
+      - ${VOLUME_EE_SOURCE}:/mnt/source/easyengine               # Backup EasyEngine directories
+      - ${VOLUME_DOCKER_VOLUMES}:/mnt/source/volumes             # Backup Docker volumes
+      - ${VOLUME_BORGMATIC_CONFIG_SOURCE}:/mnt/source/borgmatic  # Backup Borgmatic config
+      - ${VOLUME_FAIL2BAN_CONFIG_SOURCE}:/mnt/source/fail2ban    # Backup Fail2Ban config
+      - ${VOLUME_CRONTAB_SOURCE}:/mnt/source/crontab             # Backup Crontab files
+      - ${VOLUME_RESTORE_DESTINATION}:/restore                   # Restore destination directory
+      - ${VOLUME_BORG_REPOSITORY}:/mnt/borg-repository           # Borg repository management
+      - ${VOLUME_ETC_BORGMATIC}:/etc/borgmatic.d/                # Borgmatic configuration directory
+      - ${VOLUME_BORG_CONFIG}:/root/.config/borg                 # Borg client configuration
+      - ${VOLUME_SSH}:/root/.ssh                                 # SSH keys for remote access
+      - ${VOLUME_BORG_CACHE}:/root/.cache/borg                   # Borg cache directory
+      - /etc/localtime:/etc/localtime:ro                         # Sync timezone
+      - /etc/timezone:/etc/timezone:ro                           # Sync timezone
+    environment:
+      - TZ=${TZ}                                                 # Set timezone
+      - HOSTNAME=${HOSTNAME}                                     # Get Hostname of host
+      - BORGBASE_REPO_PATH=${BORGBASE_REPO_PATH}                 # Path to BorgBase repository
+      - BORG_PASSPHRASE=${BORG_PASSPHRASE}                       # Borg repository passphrase
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}               # MariaDB root password for backups
+    networks:
+      global-backend-network:
+    cap_add:                                                     # Add Linux capabilities
+      - SYS_ADMIN                                                # Required for FUSE (mounting filesystems)
+    security_opt:                                                # Adjust security options
+      - apparmor:unconfined                                      # Disable AppArmor confinement (if enabled on host)
+      - label:disable                                            # Disable SELinux labeling (if enabled on host)
+    devices:
+      - /dev/fuse:/dev/fuse                                      # Provide access to the FUSE device
+    command: /bin/bash                                           # This command would override your Borgmatic entrypoint.
+
+networks:
+  global-backend-network:
+    external: true                                               # Connects to EasyEngine's backend network
+    name: ee-global-backend-network                              # Name of the external network for EasyEngine services
