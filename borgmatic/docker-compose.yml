@@ -3,33 +3,29 @@ services:
     image: ghcr.io/borgmatic-collective/borgmatic
     container_name: borgmatic
     volumes:
-      # Sao lưu các thư mục EasyEngine và Docker
-      - ${VOLUME_EE_SOURCE}:/mnt/source/easyengine:ro
-      - ${VOLUME_DOCKER_VOLUMES}:/mnt/source/volumes:ro
-      - ${VOLUME_BORGMATIC_CONFIG_SOURCE}:/mnt/source/borgmatic:ro
-      - ${VOLUME_FAIL2BAN_CONFIG_SOURCE}:/mnt/source/fail2ban:ro
-      - ${VOLUME_CRONTAB_SOURCE}:/mnt/source/crontab:ro
-      # Thư mục khôi phục
-      - ${VOLUME_RESTORE_DESTINATION}:/restore
-      # Các thư mục quản lý Borg
-      - ${VOLUME_BORG_REPOSITORY}:/mnt/borg-repository
-      - ${VOLUME_ETC_BORGMATIC}:/etc/borgmatic.d/
-      - ${VOLUME_BORG_CONFIG}:/root/.config/borg
-      - ${VOLUME_SSH}:/root/.ssh
-      - ${VOLUME_BORG_CACHE}:/root/.cache/borg
-      # Đồng bộ múi giờ
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
+      - ${VOLUME_EE_SOURCE}:/mnt/source/easyengine:ro              # Backup EasyEngine directories
+      - ${VOLUME_DOCKER_VOLUMES}:/mnt/source/volumes:ro            # Backup Docker volumes
+      - ${VOLUME_BORGMATIC_CONFIG_SOURCE}:/mnt/source/borgmatic:ro # Backup Borgmatic config
+      - ${VOLUME_FAIL2BAN_CONFIG_SOURCE}:/mnt/source/fail2ban:ro   # Backup Fail2Ban config
+      - ${VOLUME_CRONTAB_SOURCE}:/mnt/source/crontab:ro            # Backup Crontab files
+      - ${VOLUME_RESTORE_DESTINATION}:/restore                     # Restore destination directory
+      - ${VOLUME_BORG_REPOSITORY}:/mnt/borg-repository             # Borg repository management
+      - ${VOLUME_ETC_BORGMATIC}:/etc/borgmatic.d/                  # Borgmatic configuration directory
+      - ${VOLUME_BORG_CONFIG}:/root/.config/borg                   # Borg client configuration
+      - ${VOLUME_SSH}:/root/.ssh                                   # SSH keys for remote access
+      - ${VOLUME_BORG_CACHE}:/root/.cache/borg                     # Borg cache directory
+      - /etc/localtime:/etc/localtime:ro                           # Sync timezone
+      - /etc/timezone:/etc/timezone:ro                             # Sync timezone
     environment:
-      - TZ=${TZ}
-      - BORG_PASSPHRASE=${BORG_PASSPHRASE}
-      - HOST_NAME=${HOST_NAME}
-      - BORGBASE_REPO_PATH=${BORGBASE_REPO_PATH}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - TZ=${TZ}                                                   # Set timezone
+      - BORG_PASSPHRASE=${BORG_PASSPHRASE}                         # Borg repository passphrase
+      - HOSTNAME=${HOSTNAME}                                       # Get Hostname of host
+      - BORGBASE_REPO_PATH=${BORGBASE_REPO_PATH}                   # Path to BorgBase repository
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}                 # MariaDB root password for backups
     networks:
       global-backend-network:
 
 networks:
   global-backend-network:
-    external: true
-    name: ee-global-backend-network
+    external: true                                                 # Connects to EasyEngine's backend network
+    name: ee-global-backend-network                                # Name of the external network for EasyEngine services

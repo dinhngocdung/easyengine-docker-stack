@@ -1,4 +1,4 @@
-## Config for ${HOST_NAME}
+## Config for ${HOSTNAME}
 
 source_directories:
   - /mnt/source/easyengine
@@ -9,14 +9,14 @@ source_directories:
 
 repositories:
   - path: ${BORGBASE_REPO_PATH}
-    label: "${HOST_NAME} on BorgBase"
+    label: "${HOSTNAME} on BorgBase"
 
 exclude_patterns:
   - '*.pyc'
   - ~/*/.cache
 
 compression: auto,zstd
-archive_name_format: '${HOST_NAME}-{now:%Y-%m-%d-%H%M%S}'
+archive_name_format: '${HOSTNAME}-{now:%Y-%m-%d-%H%M%S}'
 
 retries: 5
 retry_wait: 5
@@ -40,26 +40,26 @@ commands:
   - before: action
     when: [create]
     run:
-      - 'echo "Borgmatic: Starting backup for ${HOST_NAME}..."'
+      - 'echo "Borgmatic: Starting backup for ${HOSTNAME}..."'
   - after: action
     when: [create]
     states: [finish]
     run:
-      - 'echo "Borgmatic: Backup for ${HOST_NAME} completed successfully!"'
+      - 'echo "Borgmatic: Backup for ${HOSTNAME} completed successfully!"'
 
   - before: action
     when: [check]
     run:
-      - 'echo "Borgmatic: Starting consistency checks for ${HOST_NAME}..."'
+      - 'echo "Borgmatic: Starting consistency checks for ${HOSTNAME}..."'
   - after: action
     when: [check]
     states: [finish]
     run:
-      - 'echo "Borgmatic: Consistency checks for ${HOST_NAME} completed successfully!"'
+      - 'echo "Borgmatic: Consistency checks for ${HOSTNAME} completed successfully!"'
 
   - after: error
     run:
-      - 'echo "Borgmatic: An error occurred during an operation for ${HOST_NAME}. Please check logs."'
+      - 'echo "Borgmatic: An error occurred during an operation for ${HOSTNAME}. Please check logs."'
 
 mariadb_databases:
   - name: all
