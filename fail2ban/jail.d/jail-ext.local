@@ -1,0 +1,80 @@
+protocol = tcp
+port     = http,https
+chain    = DOCKER-USER
+action   = iptables-multiport[port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+           cloudflare-token
+
+# R-PUFKY DOCS
+# https://r-pufky.github.io/docs/services/fail2ban/setup-docker.html
+
+# enable filtering of nginx http auth.
+[nginx-http-auth]
+enabled  = true
+filter   = nginx-http-auth
+logpath  = /var/log/*-nginx/error.log
+bantime  = 24h
+findtime = 2h
+maxretry = 3
+
+# Invalid file / directory access attempts.
+[nginx-no-file-directory]
+enabled  = true
+filter   = nginx-no-file-directory
+logpath  = /var/log/*-nginx/error.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
+
+# Forbidden index access attempts.
+[nginx-forbidden]
+enabled  = true
+filter   = nginx-forbidden
+logpath  = /var/log/*-nginx/error.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
+
+# Ban repeated client errors.
+[nginx-errors]
+enabled  = true
+filter   = nginx-errors
+logpath  = /var/log/*-nginx/access.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
+
+# Ban clients looking for scripts.
+[nginx-noscript]
+enabled  = true
+filter   = nginx-noscript
+logpath  = /var/log/*-nginx/access.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
+
+# Ban known malicious bad bots.
+[nginx-badbots]
+enabled  = true
+filter   = nginx-badbots
+logpath  = /var/log/*-nginx/access.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
+
+# Ban requests for user home directories.
+[nginx-nohome]
+enabled  = true
+filter   = nginx-nohome
+logpath  = /var/log/*-nginx/access.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
+
+# Ban attempts to use as an open proxy.
+[nginx-noproxy]
+enabled  = true
+filter   = nginx-noproxy
+logpath  = /var/log/*-nginx/access.log
+bantime  = 24h
+findtime = 2h
+maxretry = 6
