@@ -1,0 +1,4 @@
+[DEFAULT]
+
+action               = %(action_)s
+                       cloudflare-token[cfzone="YOUR-CLOUDFLARE-ZONE", cftoken="YOUR-CLOUDFLARE-TOKEN"]

@@ -3,15 +3,16 @@ services:
   fail2ban:
     image: crazymax/fail2ban:latest
     container_name: fail2ban
-    network_mode: "host" # Cần để Fail2ban theo dõi và chặn IP trực tiếp
+    network_mode: "host"                                            # Cần để Fail2ban theo dõi và chặn IP trực tiếp
     cap_add:
-      - NET_ADMIN # Cho phép quản lý network (ví dụ: cấm IP)
-      - NET_RAW # Cho phép thao tác với các gói tin thô
+      - NET_ADMIN                                                   # Cho phép quản lý network (ví dụ: cấm IP)
+      - NET_RAW                                                     # Cho phép thao tác với các gói tin thô
     volumes:
-      - "./data:/data" # Lưu cấu hình (jails, actions, filters) và DB của Fail2ban
-      - "/opt/easyengine/services/nginx-proxy/logs:/var/log/nginx-proxy:ro" # Mount log Nginx proxy
-      - "/opt/easyengine/sites/YOUR-SITE-1.COM/logs/nginx:/var/log/YOUR-SITE-1.COM-nginx:ro" # Mount log Nginx của YOUR-SITE-1.COM
-      # - "/opt/easyengine/sites/YOUR-SITE-2.COM/logs/nginx:/var/log/YOUR-SITE-2.COM-nginx:ro" # Mount log Nginx của YOUR-SITE-2.COM (nếu có)
+      - "./data:/data"                                              # Lưu cấu hình (jails, actions, filters) và DB của Fail2ban
+      - "/var/log:/var/log:ro"                                      # Log hệ thống
+      - "/opt/easyengine/services/nginx-proxy/logs:/ee-log/nginx-proxy:ro" # Mount log Nginx proxy
+      - "/opt/easyengine/sites/YOUR-SITE-1.COM/logs/nginx:/ee-log/YOUR-SITE-1.COM-nginx:ro" # Mount log Nginx của YOUR-SITE-1.COM
+      # - "/opt/easyengine/sites/YOUR-SITE-2.COM/logs/nginx:/ee-log/YOUR-SITE-2.COM-nginx:ro" # Mount log Nginx của YOUR-SITE-2.COM (nếu có)
     env_file:
       - "./fail2ban.env"
-    restart: unless-stopped # Luôn khởi động lại trừ khi bị dừng thủ công hoặc lỗi
+    restart: unless-stopped                                         # Luôn khởi động lại trừ khi bị dừng thủ công hoặc lỗi

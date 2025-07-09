@@ -1,6 +1,8 @@
 [DEFAULT]
 ignoreip             = 116.110.40.117 127.0.0.1/8 ::1 10.0.0.0/20
+
 chain                = DOCKER-USER
+
 findtime             = 10m
 maxretry             = 5
 bantime              = 10m
@@ -15,7 +17,7 @@ bantime.multipliers  = 1 5 30 60 300 720 1440 2880
 enabled              = true
 filter               = wp-login-fail
 port                 = http,https
-logpath              = /var/log/nginx-proxy/access.log
+logpath              = /ee-log/nginx-proxy/access.log
 findtime             = 24h
 maxretry             = 10
 bantime              = 1d
@@ -28,7 +30,7 @@ enabled              = true
 filter               = nginx-req-limit
 port                 = http,https
 protocol             = tcp
-logpath              = /var/log/*-nginx/error.log
+logpath              = /ee-log/*-nginx/error.log
 findtime             = 10m
 bantime              = 2h
 maxretry             = 10
