@@ -1,37 +1,42 @@
 [DEFAULT]
+ignoreip             = 116.110.40.117 127.0.0.1/8 ::1 10.0.0.0/20
+chain                = DOCKER-USER
+findtime             = 10m
+maxretry             = 5
+bantime              = 10m
+bantime.increment    = true
+bantime.rndtime      = 2048
+bantime.multipliers  = 1 5 30 60 300 720 1440 2880
 
-ignoreip = 116.110.40.117 127.0.0.1/8 ::1 10.0.0.0/20 
-
-chain = DOCKER-USER 
-
-findtime = 10m
-maxretry = 5
-bantime = 10m
-bantime.increment = true
-bantime.rndtime = 2048
-bantime.multipliers = 1 5 30 60 300 720 1440 2880
-
-# WORDOPS TEAM 
+# WORDOPS TEAM
 
 # Ban wordpress login fail
 [wp-login-fail]
-enabled  = true
-filter   = wp-login-fail
-port     = http,https
-logpath  = /var/log/nginx-proxy/access.log
-findtime = 24h
-maxretry = 10
-bantime = 1d
+enabled              = true
+filter               = wp-login-fail
+port                 = http,https
+logpath              = /var/log/nginx-proxy/access.log
+findtime             = 24h
+maxretry             = 10
+bantime              = 1d
 
 # EASYENGINE TEAM
 
 # Ban time request limit nginx
 [nginx-req-limit]
-enabled  = true
-filter   = nginx-req-limit
-port     = http,https
-protocol = tcp
-logpath  = /var/log/*-nginx/error.log
-findtime = 10m
-bantime  = 2h
-maxretry = 10
+enabled              = true
+filter               = nginx-req-limit
+port                 = http,https
+protocol             = tcp
+logpath              = /var/log/*-nginx/error.log
+findtime             = 10m
+bantime              = 2h
+maxretry             = 10
+
+# SSH
+[sshd]
+enabled              = true
+chain                = INPUT
+port                 = ssh
+action               = iptables-multiport
+logpath              = /var/log/secure
