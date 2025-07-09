@@ -12,5 +12,6 @@ services:
       - "/opt/easyengine/services/nginx-proxy/logs:/var/log/nginx-proxy:ro" # Mount log Nginx proxy
       - "/opt/easyengine/sites/YOUR-SITE-1.COM/logs/nginx:/var/log/YOUR-SITE-1.COM-nginx:ro" # Mount log Nginx của YOUR-SITE-1.COM
       # - "/opt/easyengine/sites/YOUR-SITE-2.COM/logs/nginx:/var/log/YOUR-SITE-2.COM-nginx:ro" # Mount log Nginx của YOUR-SITE-2.COM (nếu có)
-
+    env_file:
+      - "./fail2ban.env"
     restart: unless-stopped # Luôn khởi động lại trừ khi bị dừng thủ công hoặc lỗi
