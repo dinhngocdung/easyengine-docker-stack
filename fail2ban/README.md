@@ -1,12 +1,13 @@
 # Quick Start 
-## 1. Download docker-compose.yml, .env, jail and filter:
+## 1. Download docker-compose.yml, fail2ban.env, jail and filter:
 ```bash
 mkdir -p ./fail2ban/filter.d/
 mkdir -p ./fail2ban/jail.d/
 
 curl -o ./fail2ban/docker-compose.yml -L https://raw.githubusercontent.com/dinhngocdung/ee-container-stack/refs/heads/main/fail2ban/docker-compose.yml
-curl -o ./fail2ban/.env -L https://raw.githubusercontent.com/dinhngocdung/ee-container-stack/refs/heads/main/fail2ban/.env
+curl -o ./fail2ban/.env -L https://raw.githubusercontent.com/dinhngocdung/ee-container-stack/refs/heads/main/fail2ban/fail2ban.env
 
+curl -o ./fail2ban/filter.d/sshd.local -L https://raw.githubusercontent.com/dinhngocdung/ee-container-stack/refs/heads/main/fail2ban/filter.d/sshd.local
 curl -o ./fail2ban/filter.d/nginx-req-limit.conf -L https://raw.githubusercontent.com/dinhngocdung/ee-container-stack/refs/heads/main/fail2ban/filter.d/nginx-req-limit.conf
 curl -o ./fail2ban/filter.d/wp-login-fail.conf -L https://raw.githubusercontent.com/dinhngocdung/ee-container-stack/refs/heads/main/fail2ban/filter.d/wp-login-fail.conf
 
