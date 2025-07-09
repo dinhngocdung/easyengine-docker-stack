@@ -10,8 +10,16 @@ bantime.increment    = true
 bantime.rndtime      = 2048
 bantime.multipliers  = 1 5 30 60 300 720 1440 2880
 
-# WORDOPS TEAM
 
+# SSH
+[sshd]
+enabled              = true
+chain                = INPUT
+port                 = ssh
+action               = iptables-multiport
+logpath              = /var/log/secure
+
+# WORDOPS TEAM
 # Ban wordpress login fail
 [wp-login-fail]
 enabled              = true
@@ -23,7 +31,6 @@ maxretry             = 10
 bantime              = 1d
 
 # EASYENGINE TEAM
-
 # Ban time request limit nginx
 [nginx-req-limit]
 enabled              = true
@@ -34,11 +41,3 @@ logpath              = /ee-log/*-nginx/error.log
 findtime             = 10m
 bantime              = 2h
 maxretry             = 10
-
-# SSH
-[sshd]
-enabled              = true
-chain                = INPUT
-port                 = ssh
-action               = iptables-multiport
-logpath              = /var/log/secure
