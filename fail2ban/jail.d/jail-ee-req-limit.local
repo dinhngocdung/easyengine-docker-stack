@@ -1,0 +1,13 @@
+# EASYENGINE TEAM
+# Ban time request limit nginx
+# Mount log site on docker-compose.yml
+# - "/opt/easyengine/sites/YOUR-SITE.COM/logs/nginx:/ee-log/YOUR-SITE.COM-nginx:ro"
+[nginx-req-limit]
+enabled              = true
+filter               = nginx-req-limit
+port                 = http,https
+protocol             = tcp
+logpath              = /ee-log/*-nginx/error.log
+findtime             = 10m
+bantime              = 2h
+maxretry             = 10
