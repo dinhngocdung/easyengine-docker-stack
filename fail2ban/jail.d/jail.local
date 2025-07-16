@@ -3,9 +3,9 @@ ignoreip             = 116.110.40.117 127.0.0.1/8 ::1 10.0.0.0/20  10.1.0.0/16 1
 
 chain                = DOCKER-USER
 
-findtime             = 10m
+findtime             = 6h
 maxretry             = 5
-bantime              = 10m
+bantime              = 12h
 bantime.increment    = true
 bantime.rndtime      = 2048
 bantime.multipliers  = 1 5 30 60 300 720 1440 2880
@@ -25,6 +25,3 @@ enabled              = true
 filter               = wp-login-fail
 port                 = http,https
 logpath              = /ee-log/nginx-proxy/access.log
-findtime             = 6h
-maxretry             = 5
-bantime              = 12h
