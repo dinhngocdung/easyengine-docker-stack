@@ -1,0 +1,20 @@
+/var/lib/docker/volumes/*log_php/_data/*.log
+/var/lib/docker/volumes/*log_nginx/_data/*.log
+{
+        weekly
+        missingok
+        rotate 12
+        compress
+        delaycompress
+        notifempty
+        sharedscripts
+        postrotate
+            for site in $(/usr/local/bin/ee site list --format=text --enabled); do
+                absolute_site_php=$(echo $site | sed -e 's/\.//g' )-php-1
+                absolute_site_nginx=$(echo $site | sed -e 's/\.//g' )-nginx-1
+                $(docker inspect -f '{{ .State.Pid }}' $absolute_site_nginx | xargs kill -USR1) || echo "ok"
+                $(docker inspect -f '{{ .State.Pid }}' $absolute_site_php | xargs kill -USR1) || echo "ok"
+                echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for $site" >> /opt/easyengine/logs/ee.log
+            done
+        endscript
+}

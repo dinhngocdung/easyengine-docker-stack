@@ -1,0 +1,12 @@
+/opt/easyengine/services/nginx-proxy/logs/*.log
+{
+    weekly
+    missingok
+    copytruncate
+    rotate 12
+    compress
+    delaycompress
+    notifempty
+    create 0640 www-data adm
+    sharedscripts
+}
