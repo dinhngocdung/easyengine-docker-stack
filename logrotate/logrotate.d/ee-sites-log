@@ -1,5 +1,5 @@
-/var/lib/docker/volumes/*log_php/_data/*.log
-/var/lib/docker/volumes/*log_nginx/_data/*.log
+/opt/easyengine/sites/*/logs/nginx/*.log
+/opt/easyengine/sites/*/logs/php/*.log
 {
         weekly
         missingok
