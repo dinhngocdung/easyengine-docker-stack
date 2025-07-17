@@ -1,7 +1,7 @@
 # Logrotate for Easyengine-Docker
 **My system:**
 - Host OS: RHEL 10
-- [Easyengine-Docker](https://easyengine.pages.dev/notes/easyengine-docker/)
+- [Easyengine-Docker](https://easyengine.pages.dev/notes/easyengine-docker/) Home: `/home/cloud-user/easyengine/`
 
 
 **Download** config logrotate for Nginx-proxy logs and All site logs:
