@@ -7,6 +7,6 @@
     compress
     delaycompress
     notifempty
-    create 0640 www-data adm
+    create 0640 root root
     sharedscripts
 }
