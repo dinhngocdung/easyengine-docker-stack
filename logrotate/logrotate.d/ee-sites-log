@@ -9,7 +9,7 @@
         notifempty
         sharedscripts
         postrotate
-            for site in $(/usr/local/bin/ee site list --format=text --enabled); do
+            for site in $(/usr/bin/docker compose -f ~/easyengine/docker-compose.yml run --rm easyengine ee site list --format=text --enabled); do
                 absolute_site_php=$(echo $site | sed -e 's/\.//g' )-php-1
                 absolute_site_nginx=$(echo $site | sed -e 's/\.//g' )-nginx-1
                 $(docker inspect -f '{{ .State.Pid }}' $absolute_site_nginx | xargs kill -USR1) || echo "ok"
