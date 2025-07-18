@@ -1,2 +1,5 @@
-# easyengine-docker-stack
-Config borgmatic-docker, fail2ban-docker for easyengine in docker
+# Easyengine-Docker stack
+For easyengine-docker
+1. Borgmatic-docker
+2. Fail2ban-docker
+3. LogRotate
