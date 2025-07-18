@@ -1,4 +1,4 @@
-# Borgmatic for Easyengine-Docker quick Start 
+# Borgmatic for Easyengine-docker quick start 
 1. Download docker-compose.yml, .env and borgmatic config.yaml
 
     ```bash
