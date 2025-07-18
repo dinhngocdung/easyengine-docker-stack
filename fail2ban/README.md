@@ -1,4 +1,4 @@
-# Quick Start 
+# Fail2ban for Easyengine-Docker quick Start 
 ## 1. Download docker-compose.yml, fail2ban.env, jail and filter:
 ```bash
 mkdir -p ./fail2ban/data/{jail.d,filter.d,action.d} && cd fail2ban
