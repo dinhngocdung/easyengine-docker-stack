@@ -1,4 +1,4 @@
-name: Zip and Upload Folders
+name: Zip and Upload Folders with GITHUB_TOKEN
 
 on:
   workflow_dispatch:
@@ -21,19 +21,24 @@ jobs:
             fi
           done
 
-      - name: Find latest release tag
-        id: get_release
+      - name: Get upload URL of release with tag 'latest'
+        id: get_upload_url
         run: |
-          tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
-          echo "Found latest release: $tag"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          api_url="https://api.github.com/repos/${{ github.repository }}/releases/tags/latest"
+          response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$api_url")
 
-      - name: Upload zip files to latest release
+          upload_url=$(echo "$response" | jq -r .upload_url | sed -e "s/{?name,label}//")
+          echo "Upload URL: $upload_url"
+          echo "upload_url=$upload_url" >> "$GITHUB_OUTPUT"
+
+      - name: Upload zip files using GitHub API
         run: |
           for file in zip_outputs/*.zip; do
-            gh release upload "${{ steps.get_release.outputs.tag }}" "$file" --clobber
+            filename=$(basename "$file")
+            echo "Uploading $filename..."
+            curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/zip" \
+              --data-binary @"$file" \
+              "${{ steps.get_upload_url.outputs.upload_url }}?name=$filename"
           done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
