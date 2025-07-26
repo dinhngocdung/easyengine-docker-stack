@@ -1,0 +1,39 @@
+name: Auto Zip and Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  zip-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create output folder
+        run: mkdir -p package
+
+      - name: Zip each top-level folder (except ignored ones)
+        run: |
+          for dir in */ ; do
+            name=$(basename "$dir")
+            [[ "$name" == "package" || "$name" == ".github" || "$name" == ".git" ]] && continue
+            zip -r "package/$name.zip" "$name" -x "$name/README.md"
+          done
+
+      # Upload zip files to GitHub Release if a tag is pushed
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: package/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Also upload as artifacts (optional: for non-tagged runs)
+      - name: Upload zip files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zipped-packages
+          path: package/
