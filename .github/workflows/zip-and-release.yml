@@ -1,52 +1,42 @@
 # .github/workflows/create-release-zips.yml
 
-name: Nén Thư Mục và Tải Lên Release
+name: Zip Folders to Release
 
-# 1. Kích hoạt thủ công
 on:
   workflow_dispatch:
+    # Thêm một ô nhập liệu khi chạy workflow thủ công
+    inputs:
+      tag_name:
+        description: 'Nhập tên tag của release (ví dụ: v1.0.0)'
+        required: true
+        type: string
 
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
-    # Cấp quyền ghi cho job để có thể tải file lên release
     permissions:
       contents: write
 
     steps:
-      # Bước 1: Checkout mã nguồn của repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Bước 2: Nén từng thư mục thành file zip riêng
-      # - Lặp qua tất cả các thư mục ở cấp gốc.
-      # - Bỏ qua thư mục .github.
-      # - Nén mỗi thư mục, loại trừ file README.md.
       - name: Zip individual folders
         run: |
-          # Lặp qua tất cả các mục kết thúc bằng dấu gạch chéo (tức là các thư mục)
           for dir in */; do
-            # Lấy tên thư mục không có dấu gạch chéo
             dirname="${dir%/}"
-            
-            # 3. Bỏ qua thư mục .github
             if [ "$dirname" == ".github" ]; then
               echo "Skipping .github directory..."
               continue
             fi
-            
             echo "Zipping '$dirname'..."
-            # 2. Nén thư mục thành file zip, loại trừ file README.md
             zip -r "${dirname}.zip" "$dirname" -x "*/README.md"
           done
 
-      # Bước 3: Tải các file zip lên release mới nhất
-      # - Sử dụng GitHub CLI (gh) để tải lên.
-      # - 'latest' là một alias chỉ đến bản phát hành gần đây nhất.
-      - name: Upload zip files to latest release
+      # SỬA Ở ĐÂY: Sử dụng tag name từ input thay vì 'latest'
+      - name: Upload zip files to specified release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 4. Upload các file zip vào release cuối cùng (latest)
-          gh release upload latest *.zip --clobber
-          echo "✅ All zip files have been uploaded to the latest release."
+          gh release upload ${{ github.event.inputs.tag_name }} *.zip --clobber
+          echo "✅ Đã tải tệp lên release '${{ github.event.inputs.tag_name }}'."
