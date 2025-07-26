@@ -1,4 +1,4 @@
-name: Zip Folders and Upload to GitHub Release
+name: Zip and Upload Folders
 
 on:
   workflow_dispatch:
@@ -8,35 +8,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Find folders and zip them
-      id: zip
-      run: |
-        mkdir -p zip_outputs
-        for dir in */ ; do
-          if [[ "$dir" != ".github/" && -d "$dir" ]]; then
-            name="${dir%/}"
-            echo "Zipping $name..."
-            zip -r "zip_outputs/${name}.zip" "$name" -x "$name/README.md"
-          fi
-        done
+      - name: Create zip files for each folder (excluding .github and README.md)
+        run: |
+          mkdir -p zip_outputs
+          for dir in */ ; do
+            folder=$(basename "$dir")
+            if [ "$folder" != ".github" ]; then
+              zip -r "zip_outputs/${folder}.zip" "$dir" -x "${dir}README.md"
+            fi
+          done
 
-    - name: Get latest release tag
-      id: get_release
-      run: |
-        tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
-        echo "Latest tag is: $tag"
-        echo "tag=$tag" >> $GITHUB_OUTPUT
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Find latest release tag
+        id: get_release
+        run: |
+          tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+          echo "Found latest release: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload zip files to latest release
-      run: |
-        for file in zip_outputs/*.zip; do
-          gh release upload "${{ steps.get_release.outputs.tag }}" "$file" --clobber
-          gh release upload "latest" "$file" --clobber || true
-        done
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload zip files to latest release
+        run: |
+          for file in zip_outputs/*.zip; do
+            gh release upload "${{ steps.get_release.outputs.tag }}" "$file" --clobber
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
