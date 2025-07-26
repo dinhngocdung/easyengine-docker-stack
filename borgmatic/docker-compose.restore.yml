@@ -18,12 +18,12 @@ services:
       - /etc/timezone:/etc/timezone:ro                           # Sync timezone
     environment:
       - TZ=${TZ}                                                 # Set timezone
-      - HOSTNAME=${HOSTNAME}                                     # Get Hostname of host
+      - HOSTNAME=restore-form-borg                                     # Get Hostname of host
       - BORGBASE_REPO_PATH=${BORGBASE_REPO_PATH}                 # Path to BorgBase repository
       - BORG_PASSPHRASE=${BORG_PASSPHRASE}                       # Borg repository passphrase
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}               # MariaDB root password for backups
     networks:
-      # global-backend-network:
+      global-backend-network:
     cap_add:                                                     # Add Linux capabilities
       - SYS_ADMIN                                                # Required for FUSE (mounting filesystems)
     security_opt:                                                # Adjust security options
