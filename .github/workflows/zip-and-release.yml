@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Tag cho release (ví dụ: v1.0.0). Để trống nếu không tạo release.'
-        required: false
+        description: 'Tag cho release (ví dụ: v1.0.0)'
+        required: true
 
 jobs:
   zip-and-release:
@@ -21,7 +21,7 @@ jobs:
       - name: Create output folder
         run: mkdir -p package
 
-      - name: Zip each top-level folder (except ignored ones)
+      - name: Zip each top-level folder (excluding ignored)
         run: |
           for dir in */ ; do
             name=$(basename "$dir")
@@ -29,19 +29,10 @@ jobs:
             zip -r "package/$name.zip" "$name" -x "$name/README.md"
           done
 
-      # Upload to GitHub Release if tag is provided (manual trigger)
-      - name: Upload to GitHub Release (manual input)
-        if: ${{ github.event.inputs.release_tag != '' }}
+      - name: Upload zip files to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.release_tag }}
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
           files: package/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Upload as artifacts (in all cases)
-      - name: Upload zip files as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: zipped-packages
-          path: package/
