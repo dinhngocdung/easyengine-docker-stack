@@ -1,42 +1,32 @@
-name: Manual Release Zipper
+name: Upload ZIPs to Release
 
 on:
-  workflow_dispatch: # Kích hoạt thủ công
+  workflow_dispatch:  # chỉ chạy thủ công
 
 jobs:
-  zip-and-upload:
+  zip-and-release:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # Cho phép ghi vào release
+      contents: write  # cần để tạo/update release
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Create release directory
-        run: mkdir -p release
-
-      - name: Find and zip root-level directories
+      - name: Tạo các file zip riêng trong thư mục release/
         run: |
+          mkdir -p release
           for dir in */ ; do
-            if [ -d "$dir" ]; then
-              zip -r "release/${dir%/}.zip" "$dir"
-            fi
+            dir="${dir%/}"
+            zip -r "release/$dir.zip" "$dir"
           done
 
-      - name: Get latest release tag
-        id: get_release
-        run: |
-          tag=$(gh release list --limit 1 | awk '{print $1}')
-          echo "latest_tag=$tag" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload zip files to latest release
+      - name: Upload các zip vào release có tag latest
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.get_release.outputs.latest_tag }}
+          tag_name: latest
+          name: Latest release
           files: release/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
