@@ -1,43 +1,38 @@
-name: Upload Fail2Ban ZIP to Releases
+name: Create ZIPs for Download
 
 on:
-  workflow_dispatch:  # Chạy thủ công
+  workflow_dispatch:
 
 jobs:
-  upload:
+  zip-and-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # Cho phép ghi release
 
     steps:
-      - name: Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Create ZIP excluding README.md and .github
+      - name: Set up release folder
+        run: mkdir -p release
+
+      - name: Zip each folder (excluding .github and README.md)
         run: |
-          mkdir -p release
-          zip -r release/fail2ban.zip . -x "README.md" ".github/*"
+          shopt -s dotglob
+          for dir in */ ; do
+            name=$(basename "$dir")
+            if [[ "$name" == ".github" || "$name" == "release" ]]; then
+              continue
+            fi
+            zip -r "release/${name}.zip" "$dir" -x "*.git*" ".github/*"
+          done
 
-      - name: Get latest release info
-        id: get_latest_release
-        uses: bruceadams/get-release@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Remove README.md from release folder if exists
+        run: rm -f release/README.md || true
 
-      - name: Upload ZIP to latest release tag
+      - name: Upload zipped folders to "latest" release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          files: release/fail2ban.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload ZIP to latest release (by ID)
-        if: steps.get_latest_release.outputs.id != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          release_id: ${{ steps.get_latest_release.outputs.id }}
-          files: release/fail2ban.zip
-          overwrite: true
+          files: release/*.zip
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
