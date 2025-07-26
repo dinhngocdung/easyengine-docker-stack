@@ -1,10 +1,7 @@
-# .github/workflows/create-release-zips.yml
-
-name: Zip Folders to Release
+name: Create tar.gz Archives for Release
 
 on:
   workflow_dispatch:
-    # Thêm một ô nhập liệu khi chạy workflow thủ công
     inputs:
       tag_name:
         description: 'Nhập tên tag của release (ví dụ: v1.0.0)'
@@ -21,22 +18,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Zip individual folders
+      - name: Tạo file .tar.gz từ từng thư mục
         run: |
           for dir in */; do
             dirname="${dir%/}"
             if [ "$dirname" == ".github" ]; then
-              echo "Skipping .github directory..."
+              echo "⏩ Bỏ qua thư mục .github"
               continue
             fi
-            echo "Zipping '$dirname'..."
-            zip -r "${dirname}.zip" "$dirname" -x "*/README.md"
+            echo "📦 Đang tạo '${dirname}.tar.gz'..."
+            tar --exclude="${dirname}/README.md" -czf "${dirname}.tar.gz" "$dirname"
           done
 
-      # SỬA Ở ĐÂY: Sử dụng tag name từ input thay vì 'latest'
-      - name: Upload zip files to specified release
+      - name: Tải file .tar.gz lên release theo tag đã chọn
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.event.inputs.tag_name }} *.zip --clobber
-          echo "✅ Đã tải tệp lên release '${{ github.event.inputs.tag_name }}'."
+          gh release upload ${{ github.event.inputs.tag_name }} *.tar.gz --clobber
+          echo "✅ Đã tải tệp .tar.gz lên release '${{ github.event.inputs.tag_name }}'."
