@@ -1,32 +1,43 @@
-name: Upload ZIPs to Release
+name: Upload Fail2Ban ZIP to Releases
 
 on:
-  workflow_dispatch:  # chỉ chạy thủ công
+  workflow_dispatch:  # Chạy thủ công
 
 jobs:
-  zip-and-release:
+  upload:
     runs-on: ubuntu-latest
-
     permissions:
-      contents: write  # cần để tạo/update release
+      contents: write  # Cho phép ghi release
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Tạo các file zip riêng trong thư mục release/
+      - name: Create ZIP excluding README.md and .github
         run: |
           mkdir -p release
-          for dir in */ ; do
-            dir="${dir%/}"
-            zip -r "release/$dir.zip" "$dir"
-          done
+          zip -r release/fail2ban.zip . -x "README.md" ".github/*"
 
-      - name: Upload các zip vào release có tag latest
+      - name: Get latest release info
+        id: get_latest_release
+        uses: bruceadams/get-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload ZIP to latest release tag
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Latest release
-          files: release/*.zip
+          files: release/fail2ban.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload ZIP to latest release (by ID)
+        if: steps.get_latest_release.outputs.id != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          release_id: ${{ steps.get_latest_release.outputs.id }}
+          files: release/fail2ban.zip
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
