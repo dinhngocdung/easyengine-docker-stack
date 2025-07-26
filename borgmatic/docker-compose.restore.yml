@@ -31,7 +31,6 @@ services:
       - label:disable                                            # Disable SELinux labeling (if enabled on host)
     devices:
       - /dev/fuse:/dev/fuse                                      # Provide access to the FUSE device
-    command: /bin/bash                                           # This command would override your Borgmatic entrypoint.
 
 networks:
   global-backend-network:
