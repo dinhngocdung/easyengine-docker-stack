@@ -1,24 +1,23 @@
-name: Zip Folders and Upload to GitHub Release
+name: Zip Folders and Upload to Release
 
 on:
   workflow_dispatch:
 
 jobs:
-  zip-and-upload:
+  zip-and-release:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Find folders and zip them
-      id: zip
+    - name: Zip each folder (excluding .github and README.md)
       run: |
         mkdir -p zip_outputs
         for dir in */ ; do
           if [[ "$dir" != ".github/" && -d "$dir" ]]; then
             name="${dir%/}"
-            echo "Zipping $name..."
+            echo "Zipping $name"
             zip -r "zip_outputs/${name}.zip" "$name" -x "$name/README.md"
           fi
         done
@@ -26,17 +25,33 @@ jobs:
     - name: Get latest release tag
       id: get_release
       run: |
-        tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
-        echo "Latest tag is: $tag"
+        tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName' || echo "")
+        if [[ -z "$tag" ]]; then
+          tag="auto-zip-$(date +%Y%m%d-%H%M%S)"
+          echo "No existing release. Creating new release with tag $tag"
+          gh release create "$tag" --title "Auto Zip Release $tag" --notes "Auto-generated zip files"
+        else
+          echo "Found existing release tag: $tag"
+        fi
         echo "tag=$tag" >> $GITHUB_OUTPUT
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Upload zip files to latest release
+    - name: Ensure 'latest' release exists
+      run: |
+        if ! gh release view latest &>/dev/null; then
+          echo "Creating 'latest' release"
+          gh release create latest --title "Latest Auto Zip" --notes "Auto-generated zip files (latest)"
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload zip files to releases
       run: |
         for file in zip_outputs/*.zip; do
+          echo "Uploading $file to tag: ${{ steps.get_release.outputs.tag }} and 'latest'"
           gh release upload "${{ steps.get_release.outputs.tag }}" "$file" --clobber
-          gh release upload "latest" "$file" --clobber || true
+          gh release upload "latest" "$file" --clobber
         done
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
