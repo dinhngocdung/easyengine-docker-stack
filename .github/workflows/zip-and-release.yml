@@ -1,38 +1,38 @@
-name: Create ZIPs for Download
+name: Upload zip folders to latest release
 
 on:
   workflow_dispatch:
 
 jobs:
-  zip-and-release:
+  zip-and-upload:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Set up release folder
-        run: mkdir -p release
+    - name: Prepare folders
+      run: |
+        mkdir -p release
+        shopt -s dotglob
+        for dir in */ ; do
+          # Bỏ qua .github và .git folder
+          if [[ "$dir" == ".github/" || "$dir" == ".git/" ]]; then
+            continue
+          fi
+          # Bỏ qua nếu là file, ví dụ README.md
+          if [[ ! -d "$dir" ]]; then
+            continue
+          fi
+          zipname="release/${dir%/}.zip"
+          echo "Zipping $dir -> $zipname"
+          zip -r "$zipname" "$dir"
+        done
 
-      - name: Zip each folder (excluding .github and README.md)
-        run: |
-          shopt -s dotglob
-          for dir in */ ; do
-            name=$(basename "$dir")
-            if [[ "$name" == ".github" || "$name" == "release" ]]; then
-              continue
-            fi
-            zip -r "release/${name}.zip" "$dir" -x "*.git*" ".github/*"
-          done
-
-      - name: Remove README.md from release folder if exists
-        run: rm -f release/README.md || true
-
-      - name: Upload zipped folders to "latest" release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          files: release/*.zip
-          fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload to latest release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        files: release/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
