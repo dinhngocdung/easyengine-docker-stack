@@ -1,30 +1,35 @@
-name: Upload release tarballs
+name: Release Upload
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag version (e.g., v1.0.0)'
+        required: true
+      release_name:
+        description: 'Release name (e.g., First release)'
+        required: true
 
 jobs:
-  release:
+  upload-release:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Compress folders
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Zip release files
         run: |
           mkdir -p release
-          tar -czf release/folder1.tar.gz folder1/
-          tar -czf release/folder2.tar.gz folder2/
-          tar -czf release/folder3.tar.gz folder3/
+          cp -r YOUR_FILES_OR_DIRECTORY release/
+          cd release
+          zip -r ../release.zip .
 
-      - name: Upload to GitHub Release
+      - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            release/folder1.tar.gz
-            release/folder2.tar.gz
-            release/folder3.tar.gz
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.release_name }}
+          files: release.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}  # hoặc secrets.GITHUB_TOKEN nếu đủ quyền
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
