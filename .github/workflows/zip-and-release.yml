@@ -1,38 +1,30 @@
-name: Auto Zip and Release
+name: Upload release tarballs
 
 on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: 'Tag cho release (ví dụ: v1.0.0)'
-        required: true
 
 jobs:
-  zip-and-release:
+  release:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Create output folder
-        run: mkdir -p package
-
-      - name: Zip each top-level folder (excluding ignored)
+      - name: Compress folders
         run: |
-          for dir in */ ; do
-            name=$(basename "$dir")
-            [[ "$name" == "package" || "$name" == ".github" || "$name" == ".git" ]] && continue
-            zip -r "package/$name.zip" "$name" -x "$name/README.md"
-          done
+          mkdir -p release
+          tar -czf release/folder1.tar.gz folder1/
+          tar -czf release/folder2.tar.gz folder2/
+          tar -czf release/folder3.tar.gz folder3/
 
-      - name: Upload zip files to GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
-          files: package/*.zip
+          tag_name: ${{ github.ref_name }}
+          files: |
+            release/folder1.tar.gz
+            release/folder2.tar.gz
+            release/folder3.tar.gz
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}  # hoặc secrets.GITHUB_TOKEN nếu đủ quyền
