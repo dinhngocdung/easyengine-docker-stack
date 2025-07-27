@@ -1,38 +1,59 @@
-name: Create tar.gz Archives for Release
+name: Create and Upload Release Archive
 
+# Kích hoạt workflow này khi có push vào nhánh main hoặc có thể kích hoạt thủ công
 on:
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Nhập tên tag của release (ví dụ: v1.0.0)'
-        required: true
-        type: string
+  push:
+    branches:
+      - main  # Thay 'main' bằng nhánh mặc định của bạn nếu cần
+  workflow_dispatch: # Cho phép kích hoạt thủ công từ tab Actions
 
 jobs:
-  build-and-upload:
+  build_and_upload:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Cần quyền ghi để tạo release và upload assets
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Tạo file .tar.gz từ từng thư mục
+      - name: Create archives for each directory
         run: |
+          # Lặp qua tất cả các thư mục trong thư mục gốc
           for dir in */; do
-            dirname="${dir%/}"
-            if [ "$dirname" == ".github" ]; then
-              echo "⏩ Bỏ qua thư mục .github"
+            # Bỏ qua thư mục .github
+            if [ "$dir" == ".github/" ]; then
               continue
             fi
-            echo "📦 Đang tạo '${dirname}.tar.gz'..."
-            tar --exclude="${dirname}/README.md" -czf "${dirname}.tar.gz" "$dirname"
+
+            # Tên file nén sẽ là tên thư mục
+            ARCHIVE_NAME="${dir%/}.tar.gz"
+            echo "Compressing ${dir} to ${ARCHIVE_NAME}"
+
+            # Nén thư mục, loại trừ các file không cần thiết
+            # tar -czvf [tên-file-output] [thư-mục-cần-nén] --exclude='[file-cần-loại-bỏ]'
+            tar -czvf "${ARCHIVE_NAME}" \
+              --exclude='.github' \
+              --exclude='README.md' \
+              "${dir}"
           done
 
-      - name: Tải file .tar.gz lên release theo tag đã chọn
+      - name: Get latest release
+        id: get_latest_release
+        uses: pozetroninc/github-action-get-latest-release@v0.7.0
+        with:
+          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload archives to latest release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.get_latest_release.outputs.upload_url }}
+          asset_path: ./*.tar.gz # Upload tất cả các file .tar.gz trong thư mục gốc
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload ${{ github.event.inputs.tag_name }} *.tar.gz --clobber
-          echo "✅ Đã tải tệp .tar.gz lên release '${{ github.event.inputs.tag_name }}'."
+        strategy:
+          matrix:
+            asset_name: ${{ toJSON(fromJSON('{"include":' + toJSON(steps.get_latest_release.outputs.assets.*.name) + '}').include) }}
