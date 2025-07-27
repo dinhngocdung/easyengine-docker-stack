@@ -11,45 +11,35 @@ jobs:
   build_and_upload:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Cần quyền ghi để tạo release và upload assets
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create archives for each directory
+      - name: Create archives
         run: |
-          # Lặp qua tất cả các thư mục trong thư mục gốc
+          # ... (lệnh tar để nén file) ...
           for dir in */; do
-            # Bỏ qua thư mục .github
-            if [ "$dir" == ".github/" ]; then
-              continue
-            fi
-
-            # Tên file nén sẽ là tên thư mục
+            if [ "$dir" == ".github/" ]; then continue; fi
             ARCHIVE_NAME="${dir%/}.tar.gz"
-            echo "Compressing ${dir} to ${ARCHIVE_NAME}"
-
-            # Nén thư mục, loại trừ file README.md
-            tar -czvf "${ARCHIVE_NAME}" \
-              --exclude='README.md' \
-              "${dir}"
+            tar -czvf "${ARCHIVE_NAME}" --exclude='README.md' "${dir}"
           done
 
+      # BƯỚC NÀY RẤT QUAN TRỌNG, KHÔNG ĐƯỢC XÓA
       - name: Get latest release
         id: get_latest_release
         uses: pozetroninc/github-action-get-latest-release@v0.7.0
         with:
           repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      
-      # ===== KHỐI MÃ ĐÃ SỬA LỖI BẮT ĐẦU TỪ ĐÂY =====
+
+      # Bước này cần 'upload_url' từ bước trên
       - name: Upload archives to latest release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_latest_release.outputs.upload_url }}
-          asset_path: ./*.tar.gz # Dùng glob pattern để upload tất cả các file .tar.gz
+          asset_path: ./*.tar.gz
           asset_content_type: application/gzip
-      # ===== KẾT THÚC KHỐI MÃ SỬA LỖI =====
