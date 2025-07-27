@@ -1,14 +1,13 @@
-name: Create and Upload Release Archive
+name: Auto Create and Upload tar.gz Archives for Latest Release
 
-# Kích hoạt workflow này khi có push vào nhánh main hoặc có thể kích hoạt thủ công
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main  # Thay 'main' bằng nhánh mặc định của bạn nếu cần
-  workflow_dispatch: # Cho phép kích hoạt thủ công từ tab Actions
+    tags:
+      - 'v*'  # Trigger on new version tags (e.g., v1.0.0)
 
 jobs:
-  build_and_upload:
+  build-and-upload:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -16,30 +15,34 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed to get all tags for version comparison
 
-      - name: Create archives
+      - name: Get the latest tag
+        id: get_tag
         run: |
-          # ... (lệnh tar để nén file) ...
+          latest_tag=$(git describe --tags --abbrev=0)
+          echo "latest_tag=${latest_tag}" >> $GITHUB_OUTPUT
+          echo "📌 Latest tag: ${latest_tag}"
+
+      - name: Create tar.gz archives from each directory
+        run: |
           for dir in */; do
-            if [ "$dir" == ".github/" ]; then continue; fi
-            ARCHIVE_NAME="${dir%/}.tar.gz"
-            tar -czvf "${ARCHIVE_NAME}" --exclude='README.md' "${dir}"
+            dirname="${dir%/}"
+            if [ "$dirname" == ".github" ]; then
+              echo "⏩ Skipping .github directory"
+              continue
+            fi
+            echo "📦 Creating '${dirname}.tar.gz'..."
+            tar --exclude="${dirname}/README.md" -czf "${dirname}.tar.gz" "$dirname"
           done
 
-      # BƯỚC NÀY RẤT QUAN TRỌNG, KHÔNG ĐƯỢC XÓA
-      - name: Get latest release
-        id: get_latest_release
-        uses: pozetroninc/github-action-get-latest-release@v0.7.0
-        with:
-          repository: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Bước này cần 'upload_url' từ bước trên
-      - name: Upload archives to latest release
-        uses: actions/upload-release-asset@v1
+      - name: Upload tar.gz files to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.get_latest_release.outputs.upload_url }}
-          asset_path: ./*.tar.gz
-          asset_content_type: application/gzip
+        run: |
+          gh release upload ${{ steps.get_tag.outputs.latest_tag }} *.tar.gz --clobber
+          echo "✅ Successfully uploaded tar.gz files to release '${{ steps.get_tag.outputs.latest_tag }}'"
+          
+      - name: Clean up artifacts
+        run: rm -f *.tar.gz
