@@ -1,10 +1,12 @@
-name: Auto Create and Upload tar.gz Archives for Latest Release
+name: Create tar.gz Folders for Latest Release
 
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main  # Trigger khi có thay đổi trên branch chính
     tags:
-      - 'v*'  # Trigger on new version tags (e.g., v1.0.0)
+      - 'v*'  # Trigger khi có tag mới
 
 jobs:
   build-and-upload:
