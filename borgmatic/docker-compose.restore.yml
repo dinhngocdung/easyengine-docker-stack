@@ -34,5 +34,5 @@ services:
 
 networks:
   global-backend-network:
-    # external: true                                               # Connects to EasyEngine's backend network
+    external: true                                               # Connects to EasyEngine's backend network
     name: ee-global-backend-network                              # Name of the external network for EasyEngine services
