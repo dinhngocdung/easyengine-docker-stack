@@ -30,10 +30,8 @@ jobs:
             ARCHIVE_NAME="${dir%/}.tar.gz"
             echo "Compressing ${dir} to ${ARCHIVE_NAME}"
 
-            # Nén thư mục, loại trừ các file không cần thiết
-            # tar -czvf [tên-file-output] [thư-mục-cần-nén] --exclude='[file-cần-loại-bỏ]'
+            # Nén thư mục, loại trừ file README.md
             tar -czvf "${ARCHIVE_NAME}" \
-              --exclude='.github' \
               --exclude='README.md' \
               "${dir}"
           done
@@ -44,16 +42,14 @@ jobs:
         with:
           repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
+      
+      # ===== KHỐI MÃ ĐÃ SỬA LỖI BẮT ĐẦU TỪ ĐÂY =====
       - name: Upload archives to latest release
         uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.get_latest_release.outputs.upload_url }}
-          asset_path: ./*.tar.gz # Upload tất cả các file .tar.gz trong thư mục gốc
-          asset_name: ${{ matrix.asset_name }}
-          asset_content_type: application/gzip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        strategy:
-          matrix:
-            asset_name: ${{ toJSON(fromJSON('{"include":' + toJSON(steps.get_latest_release.outputs.assets.*.name) + '}').include) }}
+        with:
+          upload_url: ${{ steps.get_latest_release.outputs.upload_url }}
+          asset_path: ./*.tar.gz # Dùng glob pattern để upload tất cả các file .tar.gz
+          asset_content_type: application/gzip
+      # ===== KẾT THÚC KHỐI MÃ SỬA LỖI =====
