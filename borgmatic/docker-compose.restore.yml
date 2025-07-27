@@ -1,6 +1,6 @@
 services:
   borgmatic:
-    image: ghcr.io/borgmatic-collective/borgmatic
+    image: b3vis/borgmatic
     container_name: borg-restore
     volumes:
       - ${VOLUME_EE_SOURCE}:/mnt/source/easyengine               # Backup EasyEngine directories
