@@ -1,0 +1,7 @@
+#!/bin/sh
+
+sudo docker compose \
+-f /opt/fail2ban/docker-compose.yml \
+exec -t fail2ban \
+fail2ban-client \
+"$@"

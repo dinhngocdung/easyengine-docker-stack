@@ -1,0 +1,6 @@
+#!/bin/sh
+
+sudo docker compose \
+-f /opt/borgmatic/docker-compose.yml \
+run --rm --entrypoint 'borgmatic' borgmatic \
+"$@"
