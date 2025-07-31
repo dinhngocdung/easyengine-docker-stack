@@ -1,15 +1,4 @@
 [mysqld]
-# - Uncontrolled binlog growth can consume excessive disk space
-# - Traditional methods (expire_logs_days, max_binlog_size) only limit:
-#   * Individual file size OR
-#   * Retention period
-#   → No total storage cap
-#
-# binlog_space_limit
-# - Mechanism:
-#   1. Sets hard limit for ALL binlogs combined (bytes)
-#   2. Auto-purges oldest files when limit reached
-#   3. Always retains newest logs for recovery/replication
 
-max_binlog_size = 100M    # Max per-file size (avoids oversized files)
-binlog_space_limit = 2G   # Total storage cap (self-cleaning mechanism)
+expire_logs_days        = 2
+max_binlog_size         = 100M
