@@ -1,4 +1,7 @@
 [mysqld]
+# Binlog không kiểm soát sẽ phát triển vô hạn, dẽ dàng chiếm dụng toàn bộ ổ đĩa
+# MariaDB sẽ là chương trình đầu tiên ngừng hoạt động, gây ra lỗi phổ biến nhất khi triển khai EasyEngine
+# Cần thiết lập 2 giới hạn sau để kiểm soát dung lượng binlog (tuỳ chỉnh theo dung lượng ổ cứng và tần suất giao dịch):
 
-expire_logs_days        = 2
-max_binlog_size         = 100M
+expire_logs_days = 2     # Xóa log sau 2 ngày
+max_binlog_size = 100M   # Log được chia nhỏ thành những file 100M/file
