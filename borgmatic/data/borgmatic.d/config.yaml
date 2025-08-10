@@ -68,4 +68,3 @@ mariadb_databases:
     password: ${MYSQL_ROOT_PASSWORD}
     format: sql
     tls: false
-    options: --compact
