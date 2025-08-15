@@ -1,7 +1,10 @@
 [Unit]
 Description=Daily Borgmatic backup for all sites
-After=network.target
+After=network.target docker.service
+Requires=docker.service
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/bash -c "HOSTNAME=$(hostname) /usr/bin/docker compose -f /opt/borgmatic/docker-compose.yml run --rm --entrypoint 'borgmatic --stats -v 0' borgmatic"
+StandardOutput=journal
+StandardError=journal
