@@ -5,5 +5,3 @@ After=network.target
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/bash -c "HOSTNAME=$(hostname) /usr/bin/docker compose -f /opt/borgmatic/docker-compose.yml run --rm --entrypoint 'borgmatic --stats -v 0' borgmatic"
-StandardOutput=append:/opt/borgmatic/cron.log
-StandardError=append:/opt/borgmatic/cron.log
