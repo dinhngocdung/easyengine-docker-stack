@@ -8,10 +8,10 @@
     notifempty
     sharedscripts
     postrotate
-        # Send signal USR1 to nginx-proxy container
-        $(sudo /usr/bin/docker inspect -f '{{ .State.Pid }}' services_global-nginx-proxy_1 | xargs sudo /usr/bin/kill -USR1) || echo "ok"
-        
-        # Write log
-        echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for nginx-proxy" | sudo tee -a /opt/easyengine/logs/ee.log >/dev/null
+        # Gửi USR1 cho container nginx-proxy
+        /usr/bin/docker inspect -f '{{ .State.Pid }}' services_global-nginx-proxy_1 | xargs /usr/bin/kill -USR1 || echo "ok"
+
+        # Ghi log
+        echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for nginx-proxy" >> /opt/easyengine/logs/ee.log
     endscript
 }
