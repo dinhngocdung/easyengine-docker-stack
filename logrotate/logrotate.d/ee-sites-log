@@ -1,20 +1,22 @@
 /opt/easyengine/sites/*/logs/nginx/*.log
 /opt/easyengine/sites/*/logs/php/*.log
 {
-        weekly
-        missingok
-        rotate 12
-        compress
-        delaycompress
-        notifempty
-        sharedscripts
-        postrotate
-            for site in $(sudo /usr/bin/docker compose -f /home/cloud-user/easyengine/docker-compose.yml run --rm easyengine ee site list --format=text --enabled); do
-                absolute_site_php=$(echo $site | sed -e 's/\.//g' )-php-1
-                absolute_site_nginx=$(echo $site | sed -e 's/\.//g' )-nginx-1
-                $(sudo /usr/bin/docker inspect -f '{{ .State.Pid }}' $absolute_site_nginx | xargs sudo /usr/bin/kill -USR1) || echo "ok"
-                $(sudo /usr/bin/docker inspect -f '{{ .State.Pid }}' $absolute_site_php | xargs sudo /usr/bin/kill -USR1) || echo "ok"
-                echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for $site" | sudo tee -a /opt/easyengine/logs/ee.log >/dev/null
-            done
-        endscript
+    weekly
+    missingok
+    rotate 12
+    compress
+    delaycompress
+    notifempty
+    sharedscripts
+    postrotate
+        for site in $(/usr/bin/docker compose -f /home/cloud-user/easyengine/docker-compose.yml run --rm easyengine ee site list --format=text --enabled); do
+            absolute_site_php=$(echo $site | sed -e 's/\.//g')-php-1
+            absolute_site_nginx=$(echo $site | sed -e 's/\.//g')-nginx-1
+
+            /usr/bin/docker inspect -f '{{ .State.Pid }}' $absolute_site_nginx | xargs /usr/bin/kill -USR1 || echo "ok"
+            /usr/bin/docker inspect -f '{{ .State.Pid }}' $absolute_site_php | xargs /usr/bin/kill -USR1 || echo "ok"
+
+            echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for $site" >> /opt/easyengine/logs/ee.log
+        done
+    endscript
 }
