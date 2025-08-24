@@ -1,0 +1,19 @@
+module easyengine-logrotate 1.0;
+
+require {
+    type logrotate_t;
+    type container_runtime_exec_t;
+    type usr_t;
+    class file { read open getattr append execute execute_no_trans };
+}
+
+#============= logrotate_t ==============
+
+# 1. Quyền đọc docker inspect
+allow logrotate_t container_runtime_exec_t:file { read open getattr };
+
+# 2. Quyền thực thi docker compose  
+allow logrotate_t container_runtime_exec_t:file { execute execute_no_trans };
+
+# 3. Quyền ghi append vào log file (giữ nguyên usr_t)
+allow logrotate_t usr_t:file append;
