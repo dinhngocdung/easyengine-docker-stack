@@ -1,18 +1,15 @@
-name: Compile SELinux Policy
+name: Create tar.gz Folders for Latest Release
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'logrotate/selinux-policy/ee-logrotate.te'
-      - '.github/workflows/compile-selinux-policy.yml'
   workflow_dispatch:
+  push:
+  #  branches:
+  #    - main  # Trigger khi có thay đổi trên branch chính
+    tags:
+      - 'v*'  # Trigger khi có tag mới
 
 jobs:
-  compile-policy:
-    # Sử dụng container Fedora để có sẵn các công cụ SELinux
-    container: fedora:latest
+  build-and-upload:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -20,25 +17,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed to get all tags for version comparison
 
-      - name: Install SELinux build tools and Git
-        # Cài đặt các gói cần thiết và cả git trong container Fedora
-        run: dnf install -y policycoreutils-devel selinux-policy-devel make git
-
-      - name: Compile and package SELinux policy
-        run: |
-          # Di chuyển vào thư mục chứa file .te
-          cd logrotate/selinux-policy/
-
-          # Bước 1: Biên dịch file .te thành .mod
-          echo "Compiling ee-logrotate.te to ee-logrotate.mod..."
-          checkmodule -M -m -o ee-logrotate.mod ee-logrotate.te
-
-          # Bước 2: Tạo policy package (.pp) từ file .mod
-          echo "Creating ee-logrotate.pp from ee-logrotate.mod..."
-          semodule_package -o ee-logrotate.pp -m ee-logrotate.mod
-
-      # Lấy thông tin tag mới nhất, vì upload release cần tag
       - name: Get the latest tag
         id: get_tag
         run: |
@@ -46,12 +27,24 @@ jobs:
           echo "latest_tag=${latest_tag}" >> $GITHUB_OUTPUT
           echo "📌 Latest tag: ${latest_tag}"
 
-      # Tải file .pp lên GitHub Release
-      - name: Upload compiled policy file to release
+      - name: Create tar.gz archives from each directory
+        run: |
+          for dir in */; do
+            dirname="${dir%/}"
+            if [ "$dirname" == ".github" ]; then
+              echo "⏩ Skipping .github directory"
+              continue
+            fi
+            echo "📦 Creating '${dirname}.tar.gz'..."
+            tar --exclude="${dirname}/README.md" -czf "${dirname}.tar.gz" "$dirname"
+          done
+
+      - name: Upload tar.gz files to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Di chuyển file .pp về thư mục gốc để dễ dàng upload
-          mv logrotate/selinux-policy/ee-logrotate.pp .
-          gh release upload ${{ steps.get_tag.outputs.latest_tag }} ee-logrotate.pp --clobber
-          echo "✅ Successfully uploaded ee-logrotate.pp to release '${{ steps.get_tag.outputs.latest_tag }}'"
+          gh release upload ${{ steps.get_tag.outputs.latest_tag }} *.tar.gz --clobber
+          echo "✅ Successfully uploaded tar.gz files to release '${{ steps.get_tag.outputs.latest_tag }}'"
+          
+      - name: Clean up artifacts
+        run: rm -f *.tar.gz

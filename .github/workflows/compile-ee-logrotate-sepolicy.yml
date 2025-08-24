@@ -1,4 +1,4 @@
-name: Compile EE-LogRotate SELinux Policy
+name: Compile SELinux Policy
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'logrotate/selinux-policy/ee-logrotate.te'
-      - '.github/workflows/compile-selinux-policy.yml'
+      - '.github/workflows/compile-ee-logrotate-sepolicy.yml'
   workflow_dispatch:
 
 jobs:
@@ -21,9 +21,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install SELinux build tools
-        # Cài đặt các gói cần thiết trong container Fedora
-        run: dnf install -y policycoreutils-devel selinux-policy-devel make
+      - name: Install SELinux build tools and Git
+        # Cài đặt các gói cần thiết và cả git trong container Fedora
+        run: dnf install -y policycoreutils-devel selinux-policy-devel make git
 
       - name: Compile and package SELinux policy
         run: |
@@ -32,6 +32,7 @@ jobs:
 
           # Bước 1: Biên dịch file .te thành .mod
           echo "Compiling ee-logrotate.te to ee-logrotate.mod..."
+          # Đổi tên file đầu ra để khớp với tên module bên trong file .te
           checkmodule -M -m -o ee-logrotate.mod ee-logrotate.te
 
           # Bước 2: Tạo policy package (.pp) từ file .mod
@@ -53,6 +54,7 @@ jobs:
         run: |
           # Di chuyển file .pp về thư mục gốc để dễ dàng upload
           mv logrotate/selinux-policy/ee-logrotate.pp .
+          # Đổi tên file để tải lên khớp với tên mới
           gh release upload ${{ steps.get_tag.outputs.latest_tag }} ee-logrotate.pp --clobber
           echo "✅ Successfully uploaded ee-logrotate.pp to release '${{ steps.get_tag.outputs.latest_tag }}'"
           
