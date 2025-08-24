@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'logrotate/selinux-policy/ee-logrotate.te'
-      - '.github/workflows/compile-selinux-policy.yml'
+      - '.github/workflows/compile-ee-logrotate-sepolicy.yml'
   workflow_dispatch:
 
 jobs:
