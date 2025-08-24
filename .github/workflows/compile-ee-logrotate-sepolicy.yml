@@ -1,0 +1,65 @@
+name: Compile EE-LogRotate SELinux Policy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'logrotate/selinux-policy/ee-logrotate.te'
+      - '.github/workflows/compile-selinux-policy.yml'
+  workflow_dispatch:
+
+jobs:
+  compile-policy:
+    # Sử dụng container Fedora để có sẵn các công cụ SELinux
+    container: fedora:latest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install SELinux build tools
+        # Cài đặt các gói cần thiết trong container Fedora
+        run: dnf install -y policycoreutils-devel selinux-policy-devel make
+
+      - name: Compile and package SELinux policy
+        run: |
+          # Di chuyển vào thư mục chứa file .te
+          cd logrotate/selinux-policy/
+
+          # Bước 1: Biên dịch file .te thành .mod
+          echo "Compiling ee-logrotate.te to ee-logrotate.mod..."
+          checkmodule -M -m -o ee-logrotate.mod ee-logrotate.te
+
+          # Bước 2: Tạo policy package (.pp) từ file .mod
+          echo "Creating ee-logrotate.pp from ee-logrotate.mod..."
+          semodule_package -o ee-logrotate.pp -m ee-logrotate.mod
+
+      # Thêm một bước để lấy thông tin tag mới nhất, vì upload release cần tag
+      - name: Get the latest tag
+        id: get_tag
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0)
+          echo "latest_tag=${latest_tag}" >> $GITHUB_OUTPUT
+          echo "📌 Latest tag: ${latest_tag}"
+
+      # Thêm bước này để tải file .pp lên GitHub Release
+      - name: Upload compiled policy file to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Di chuyển file .pp về thư mục gốc để dễ dàng upload
+          mv logrotate/selinux-policy/ee-logrotate.pp .
+          gh release upload ${{ steps.get_tag.outputs.latest_tag }} ee-logrotate.pp --clobber
+          echo "✅ Successfully uploaded ee-logrotate.pp to release '${{ steps.get_tag.outputs.latest_tag }}'"
+          
+      # Xóa bước upload artifact cũ
+      # - name: Upload compiled policy file
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: compiled-selinux-policy
+      #     path: ee-logrotate.pp
+      #     retention-days: 5
