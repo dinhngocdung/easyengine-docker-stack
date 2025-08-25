@@ -52,6 +52,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Di chuyển file .pp về thư mục gốc để dễ dàng upload
-          mv logrotate/selinux-policy/ee-logrotate.pp .
+          cp logrotate/selinux-policy/ee-logrotate.pp .
           gh release upload ${{ steps.get_tag.outputs.latest_tag }} ee-logrotate.pp --clobber
           echo "✅ Successfully uploaded ee-logrotate.pp to release '${{ steps.get_tag.outputs.latest_tag }}'"
+      
+      - name: Commit and push compiled policy to repository
+        run: |
+          # Cấu hình git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Di chuyển file .pp vào thư mục mong muốn (nếu cần)
+          # Ở đây giữ nguyên trong thư mục logrotate/selinux-policy/
+          
+          # Thêm file .pp vào staging
+          git add logrotate/selinux-policy/ee-logrotate.pp
+          
+          # Kiểm tra xem có thay đổi nào để commit không
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            # Commit và push
+            git commit -m "ci: auto-compiled SELinux policy [skip ci]"
+            git push
+            echo "✅ Successfully committed and pushed ee-logrotate.pp to repository"
+          fi
