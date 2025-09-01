@@ -18,5 +18,9 @@
 
             echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for $site" >> /opt/easyengine/logs/ee.log
         done
+        
+        # Tải lại Fail2ban sau khi tất cả các log đã được xoay
+        /usr/bin/docker compose -f /opt/fail2ban/docker-compose.yml exec fail2ban fail2ban-client reload || true
+
     endscript
 }

@@ -13,5 +13,8 @@
 
         # Ghi log
         echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for nginx-proxy" >> /opt/easyengine/logs/ee.log
+
+        # Tải lại Fail2ban để đọc log mới
+        /usr/bin/docker compose -f /opt/fail2ban/docker-compose.yml exec fail2ban fail2ban-client reload || true
     endscript
 }
