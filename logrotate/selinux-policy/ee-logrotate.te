@@ -4,12 +4,15 @@ require {
     type logrotate_t;
     type container_runtime_exec_t;
     type usr_t;
+    type container_var_run_t;
+    type sysctl_net_t;
     class file { read open getattr append execute execute_no_trans map };
+    class sock_file write;
+    class dir search;
 }
 
 #============= logrotate_t ==============
-
-allow logrotate_t container_runtime_exec_t:file { read open getattr };
-allow logrotate_t container_runtime_exec_t:file { execute execute_no_trans };
-allow logrotate_t container_runtime_exec_t:file map;
+allow logrotate_t container_runtime_exec_t:file { read open getattr execute execute_no_trans map };
 allow logrotate_t usr_t:file append;
+allow logrotate_t container_var_run_t:sock_file write;
+allow logrotate_t sysctl_net_t:dir search;
