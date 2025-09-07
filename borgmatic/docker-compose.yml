@@ -22,6 +22,7 @@ services:
       - BORGBASE_REPO_PATH=${BORGBASE_REPO_PATH}                   # Path to BorgBase repository
       - BORG_PASSPHRASE=${BORG_PASSPHRASE}                         # Borg repository passphrase
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}                 # MariaDB root password for backups
+      - BORG_RSH=${BORG_RSH}                                       # SSH parameters, e.g., for remote access
     networks:
       global-backend-network:
 
