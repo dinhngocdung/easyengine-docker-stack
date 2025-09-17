@@ -1,5 +1,6 @@
 [DEFAULT]
-ignoreip             = 116.110.40.117 127.0.0.1/8 ::1 10.0.0.0/20  10.1.0.0/16 10.2.0.0/16
+# IP cua Easyengine
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/20 10.1.0.0/16 10.2.0.0/16
 
 chain                = DOCKER-USER
 
@@ -19,9 +20,15 @@ port                 = ssh
 action               = iptables-multiport
 logpath              = /var/log/secure
 
-[wp-login-fail]
+[wordpress-login]
 # Ban wordpress login fail, with cloudflare or not
 enabled              = true
-filter               = wp-login-fail
+filter               = wordpress-login
+port                 = http,https
+logpath              = /ee-log/nginx-proxy/access.log
+
+[wordpress-xmlrpc]
+enabled              = true
+filter               = wordpress-xmlrpc
 port                 = http,https
 logpath              = /ee-log/nginx-proxy/access.log

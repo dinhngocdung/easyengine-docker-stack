@@ -8,7 +8,7 @@ sudo curl -o /opt/fail2ban/fail2ban.env -L https://raw.githubusercontent.com/din
 
 sudo curl -o /opt/fail2ban/data/filter.d/sshd.local -L https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/refs/heads/main/fail2ban/filter.d/sshd.local
 sudo curl -o /opt/fail2ban/data/filter.d/nginx-req-limit.conf -L https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/refs/heads/main/fail2ban/filter.d/nginx-req-limit.conf
-sudo curl -o /opt/fail2ban/data/filter.d/wp-login-fail.conf -L https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/refs/heads/main/fail2ban/filter.d/wp-login-fail.conf
+sudo curl -o /opt/fail2ban/data/filter.d/wordpress-login.conf -L https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/refs/heads/main/fail2ban/filter.d/wordpress-login.conf
 
 sudo curl -o /opt/fail2ban/data/jail.d/jail.local -L https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/refs/heads/main/fail2ban/jail.d/jail.local
 ```
