@@ -3,7 +3,7 @@
 # Mount log site on docker-compose.yml
 # - "/opt/easyengine/sites/YOUR-SITE.COM/logs/nginx:/ee-log/YOUR-SITE.COM-nginx:ro"
 [nginx-req-limit]
-enabled              = true
+enabled              = false
 filter               = nginx-req-limit
 port                 = http,https
 protocol             = tcp
