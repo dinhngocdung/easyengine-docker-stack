@@ -1,26 +1,16 @@
 /opt/easyengine/sites/*/logs/nginx/*.log
 /opt/easyengine/sites/*/logs/php/*.log
 {
-    weekly
+    daily
     missingok
-    rotate 12
+    rotate 14
     compress
     delaycompress
     notifempty
+    copytruncate
     sharedscripts
     postrotate
-        for site in $(/usr/bin/docker compose -f /opt/easyengine/docker-compose.yml run --rm easyengine ee site list --format=text --enabled); do
-            absolute_site_php=$(echo $site | sed -e 's/\.//g')-php-1
-            absolute_site_nginx=$(echo $site | sed -e 's/\.//g')-nginx-1
-
-            /usr/bin/docker inspect -f '{{ .State.Pid }}' $absolute_site_nginx | xargs /usr/bin/kill -USR1 || echo "ok"
-            /usr/bin/docker inspect -f '{{ .State.Pid }}' $absolute_site_php | xargs /usr/bin/kill -USR1 || echo "ok"
-
-            echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for $site" >> /opt/easyengine/logs/ee.log
-        done
-        
-        # Tải lại Fail2ban sau khi tất cả các log đã được xoay
         /usr/bin/docker compose -f /opt/fail2ban/docker-compose.yml exec fail2ban fail2ban-client reload || true
-
+        echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Daily rotate site logs" >> /opt/easyengine/logs/ee.log
     endscript
 }

@@ -1,20 +1,15 @@
 /opt/easyengine/services/nginx-proxy/logs/*.log
 {
-    weekly
+    daily
     missingok
-    rotate 12
+    rotate 14
     compress
     delaycompress
     notifempty
+    copytruncate
     sharedscripts
     postrotate
-        # Gửi USR1 cho container nginx-proxy
-        /usr/bin/docker inspect -f '{{ .State.Pid }}' services_global-nginx-proxy_1 | xargs /usr/bin/kill -USR1 || echo "ok"
-
-        # Ghi log
-        echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Rotated logs for nginx-proxy" >> /opt/easyengine/logs/ee.log
-
-        # Tải lại Fail2ban để đọc log mới
         /usr/bin/docker compose -f /opt/fail2ban/docker-compose.yml exec fail2ban fail2ban-client reload || true
+        echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Daily rotate nginx-proxy logs" >> /opt/easyengine/logs/ee.log
     endscript
 }

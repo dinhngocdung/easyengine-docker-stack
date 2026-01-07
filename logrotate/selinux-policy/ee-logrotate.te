@@ -1,18 +1,26 @@
-module ee-logrotate 1.0;
+module ee-logrotate 1.1;
 
 require {
     type logrotate_t;
     type container_runtime_exec_t;
     type usr_t;
     type container_var_run_t;
+    type container_var_lib_t;
     type sysctl_net_t;
-    class file { read open getattr append execute execute_no_trans map };
+    class file { read open getattr append execute execute_no_trans map write ioctl lock create setattr unlink rename }; 
     class sock_file write;
-    class dir search;
+    class dir { read search getattr write add_name remove_name };
 }
 
 #============= logrotate_t ==============
+# Cho phép logrotate thao tác trên dữ liệu Docker (copytruncate & nén)
+allow logrotate_t container_var_lib_t:dir { read search getattr write add_name remove_name };
+allow logrotate_t container_var_lib_t:file { read open getattr write append ioctl lock create setattr unlink rename };
+
+# Cho phép logrotate thực thi lệnh docker/docker-compose để reload dịch vụ phụ trợ
 allow logrotate_t container_runtime_exec_t:file { read open getattr execute execute_no_trans map };
-allow logrotate_t usr_t:file append;
 allow logrotate_t container_var_run_t:sock_file write;
+
+# Các quyền bổ trợ hệ thống
+allow logrotate_t usr_t:file append;
 allow logrotate_t sysctl_net_t:dir search;
