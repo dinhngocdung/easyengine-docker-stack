@@ -1,6 +1,12 @@
 #!/bin/sh
 
-sudo docker compose \
--f /opt/borgmatic/docker-compose.yml \
-run --rm --entrypoint 'borgmatic' borgmatic \
-"$@"
+# Update borgmatic bằng cách pull image mới nếu có
+if [ "$1" = "update" ]; then
+    sudo docker compose -f /opt/borgmatic/docker-compose.yml pull
+else
+    # Thực hiện các lệnh borgmatic tiêu chuẩn
+    sudo docker compose \
+    -f /opt/borgmatic/docker-compose.yml \
+    run --rm --entrypoint 'borgmatic' borgmatic \
+    "$@"
+fi
