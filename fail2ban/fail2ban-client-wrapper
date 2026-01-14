@@ -1,7 +1,19 @@
 #!/bin/sh
 
-sudo docker compose \
--f /opt/fail2ban/docker-compose.yml \
-exec -t fail2ban \
-fail2ban-client \
-"$@"
+# Đường dẫn tới file docker-compose của Fail2ban
+COMPOSE_FILE="/opt/fail2ban/docker-compose.yml"
+
+# Nếu lệnh là 'fail2ban-client update', thực hiện cập nhật container
+if [ "$1" = "update" ]; then
+    echo "Updating Fail2ban image and restarting service..."
+    sudo docker compose -f "$COMPOSE_FILE" pull
+    sudo docker compose -f "$COMPOSE_FILE" up -d
+else
+    # Giữ nguyên các tham số truyền vào cho fail2ban-client native bên trong container
+    # Sử dụng exec -t để hỗ trợ tương tác dòng lệnh
+    sudo docker compose \
+    -f "$COMPOSE_FILE" \
+    exec -t fail2ban \
+    fail2ban-client \
+    "$@"
+fi
