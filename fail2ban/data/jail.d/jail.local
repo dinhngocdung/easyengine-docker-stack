@@ -17,7 +17,7 @@ bantime.multipliers  = 1 5 30 60 300 720 1440 2880
 enabled              = true
 chain                = INPUT
 port                 = ssh
-action               = iptables-multiport
+action               = iptables-multiport[name=sshd, port="%(port)s", protocol=tcp, chain="%(chain)s"]
 logpath              = /var/log/secure
 
 [wordpress-login]
