@@ -10,7 +10,6 @@
     copytruncate
     sharedscripts
     postrotate
-        /usr/bin/docker compose -f /opt/fail2ban/docker-compose.yml exec fail2ban fail2ban-client reload || true
         echo "$(date +'[%d/%m/%Y %H:%M:%S]') LogRotate.INFO: Daily rotate site logs" >> /opt/easyengine/logs/ee.log
     endscript
 }
