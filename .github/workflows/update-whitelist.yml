@@ -1,4 +1,10 @@
+# Updated: added permissions and explicit checkout credentials to allow git push
 name: Update Whitelist
+
+# Give the workflow permission to write repository contents (needed for git push)
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: '0 0 * * 0' # Tự động chạy 00:00 Chủ Nhật hàng tuần
@@ -10,34 +16,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # Ensure the checkout action persists the GITHUB_TOKEN credentials so git push uses it
+          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Fetch and Clean IPs
         run: |
-          # 1. Tạo thư mục fail2ban nếu chưa có
           mkdir -p fail2ban
-          
-          # 2. Tạo file tạm để gom dữ liệu
           touch raw_ips.txt
-          
-          # 3. Thu thập IP từ các nguồn
           curl -s https://www.cloudflare.com/ips-v4 >> raw_ips.txt
           curl -s https://www.cloudflare.com/ips-v6 >> raw_ips.txt
           curl -s https://openai.com/gptbot.json | jq -r '.prefixes[] | .ipv4Prefix // .ipv6Prefix' >> raw_ips.txt
           curl -s -L -A "Mozilla/5.0" https://jetpack.com/ips-v4.txt >> raw_ips.txt
           curl -s -L -A "Mozilla/5.0" https://jetpack.com/ips-v6.txt >> raw_ips.txt
-
-          # 4. Làm sạch và lưu vào đúng thư mục fail2ban/
           grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?|([0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}(/[0-9]{1,3})?' raw_ips.txt | sort -u > fail2ban/official-whitelist.conf
-          
-          # Dọn dẹp file tạm
           rm raw_ips.txt
 
       - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
-          # Chỉ push nếu file có sự thay đổi
+
           git add fail2ban/official-whitelist.conf
           if git diff --staged --quiet; then
             echo "Không có thay đổi về IP, bỏ qua commit."
