@@ -26,12 +26,34 @@ jobs:
         run: |
           mkdir -p fail2ban
           touch raw_ips.txt
+          
+          # 1. Cloudflare IPs
           curl -s https://www.cloudflare.com/ips-v4 >> raw_ips.txt
           curl -s https://www.cloudflare.com/ips-v6 >> raw_ips.txt
+          
+          # 2. OpenAI (ChatGPT Bot)
           curl -s https://openai.com/gptbot.json | jq -r '.prefixes[] | .ipv4Prefix // .ipv6Prefix' >> raw_ips.txt
+          
+          # 3. Jetpack (Automattic)
           curl -s -L -A "Mozilla/5.0" https://jetpack.com/ips-v4.txt >> raw_ips.txt
           curl -s -L -A "Mozilla/5.0" https://jetpack.com/ips-v6.txt >> raw_ips.txt
+          
+          # 4. GoogleBot & Google Services (3 nguồn chính thức)
+          # Core Search Bot
+          curl -s https://developers.google.com/search/apis/ipranges/googlebot.json | jq -r '.prefixes[] | .ipv4Prefix // .ipv6Prefix' >> raw_ips.txt
+          # Special Crawlers (Ads, Feedfetcher, etc.)
+          curl -s https://developers.google.com/static/search/apis/ipranges/special-crawlers.json | jq -r '.prefixes[] | .ipv4Prefix // .ipv6Prefix' >> raw_ips.txt
+          # User-triggered tools (PageSpeed, Search Console)
+          curl -s https://developers.google.com/static/search/apis/ipranges/user-triggered-fetchers.json | jq -r '.prefixes[] | .ipv4Prefix // .ipv6Prefix' >> raw_ips.txt
+          
+          # 5. BingBot (Microsoft)
+          curl -s https://www.bing.com/toolbox/bingbot.json | jq -r '.prefixes[] | .ipv4Prefix // .ipv6Prefix' >> raw_ips.txt
+
+          # 6. Làm sạch: Lọc định dạng IP, xóa trùng, sắp xếp
+          # Regex này hỗ trợ cả IPv4 và IPv6 chuẩn xác
           grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?|([0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}(/[0-9]{1,3})?' raw_ips.txt | sort -u > fail2ban/official-whitelist.conf
+          
+          # Dọn dẹp file tạm
           rm raw_ips.txt
 
       - name: Commit and Push
