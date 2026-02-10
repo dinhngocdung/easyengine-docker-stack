@@ -1,3 +1,3 @@
 [DEFAULT]
 
-ignoreip = ignoreip = ipset:fail2ban-whitelist ipset:fail2ban-whitelist-v6
+ignoreip = ipset:fail2ban-whitelist ipset:fail2ban-whitelist-v6
