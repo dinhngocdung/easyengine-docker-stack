@@ -6,8 +6,8 @@ permissions:
   contents: write
 
 on:
-  schedule:
-    - cron: '0 0 * * 0' # Tự động chạy 00:00 Chủ Nhật hàng tuần
+  #schedule:
+    #- cron: '0 0 * * 0' # Tự động chạy 00:00 Chủ Nhật hàng tuần
   workflow_dispatch:      # Nút bấm chạy thủ công trên GitHub
 
 jobs:
