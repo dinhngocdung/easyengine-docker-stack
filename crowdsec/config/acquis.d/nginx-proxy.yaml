@@ -1,0 +1,5 @@
+filenames:
+  - /var/log/nginx-proxy/access.log
+  - /var/log/nginx-proxy/error.log
+labels:
+  type: nginx
