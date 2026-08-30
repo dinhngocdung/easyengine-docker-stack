@@ -189,29 +189,15 @@ copy_repo_file \
 
 log "Rendering docker-compose.yml..."
 
-python3 - "$APP_DIR/docker-compose.yml.template" \
-         "$APP_DIR/docker-compose.yml" \
-         "$NGINX_PROXY_LOG_DIR" <<'PY'
-import sys
-from pathlib import Path
+ESCAPED_NGINX_PROXY_LOG_DIR="$(
+    printf '%s' "$NGINX_PROXY_LOG_DIR" |
+    sed 's/[&/\]/\\&/g'
+)"
 
-template_path = Path(sys.argv[1])
-output_path = Path(sys.argv[2])
-log_dir = sys.argv[3]
-
-content = template_path.read_text()
-
-placeholder = "**NGINX_PROXY_LOG_DIR**"
-
-if placeholder not in content:
-    raise SystemExit(
-        f"Template placeholder not found: {placeholder}"
-    )
-
-content = content.replace(placeholder, log_dir)
-
-output_path.write_text(content)
-PY
+sed \
+    "s|\*\*NGINX_PROXY_LOG_DIR\*\*|$ESCAPED_NGINX_PROXY_LOG_DIR|g" \
+    "$APP_DIR/docker-compose.yml.template" \
+    > "$APP_DIR/docker-compose.yml"
 
 chmod 0644 "$APP_DIR/docker-compose.yml"
 
