@@ -1,6 +1,7 @@
 name: crowdsec
 
 services:
+
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
@@ -12,21 +13,25 @@ services:
     volumes:
       - ./config:/etc/crowdsec
       - ./data:/var/lib/crowdsec/data
+      - /etc/localtime:/etc/localtime:ro
       - /var/log/secure:/var/log/secure:ro
-      - ${NGINX_PROXY_LOG_DIR}:/var/log/nginx-proxy:ro
+      - __NGINX_PROXY_LOG_DIR__:/var/log/nginx-proxy:ro
     restart: unless-stopped
 
   fw-bouncer:
-    build: ./fw-bouncer
+    image: ghcr.io/shgew/cs-firewall-bouncer-docker:stable
     container_name: crowdsec-fw-bouncer
     network_mode: "host"
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       - crowdsec
     volumes:
-      - ./data-bouncers/fw-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml:ro
+      - ./data-bouncers/fw-bouncer.yaml:/config/crowdsec-firewall-bouncer.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 
   cloudflare-worker-bouncer:
@@ -36,4 +41,5 @@ services:
       - crowdsec
     volumes:
       - ./data-bouncers/cf-worker-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-cloudflare-worker-bouncer.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
