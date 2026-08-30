@@ -189,10 +189,9 @@ copy_repo_file \
 
 log "Rendering docker-compose.yml..."
 
-python3 \
-    "$APP_DIR/docker-compose.yml.template" \
-    "$APP_DIR/docker-compose.yml" \
-    "$NGINX_PROXY_LOG_DIR" <<'PY'
+python3 - "$APP_DIR/docker-compose.yml.template" \
+         "$APP_DIR/docker-compose.yml" \
+         "$NGINX_PROXY_LOG_DIR" <<'PY'
 import sys
 from pathlib import Path
 
