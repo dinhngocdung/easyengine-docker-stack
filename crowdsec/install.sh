@@ -1,14 +1,13 @@
-```bash
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
 APP_DIR="/opt/crowdsec"
 
 # GitHub repository
-REPO_BASE_URL="https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/main/crowdsec"
+REPO_BASE_URL="https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/refs/heads/main/crowdsec"
 
 # Temporary directory for downloaded repository files
-DOWNLOAD_DIR="/tmp/crowdsec-installer"
+DOWNLOAD_DIR="$(mktemp -d /tmp/crowdsec-installer.XXXXXX)"
 
 log() {
     printf '\033[1;32m[+]\033[0m %s\n' "$*"
@@ -23,13 +22,19 @@ die() {
     exit 1
 }
 
+cleanup() {
+    rm -rf "$DOWNLOAD_DIR"
+}
+
+trap cleanup EXIT
 trap 'die "Installation failed at line $LINENO. See the command above."' ERR
 
 # ---------------------------------------------------------------------------
 # 1. Preflight checks
 # ---------------------------------------------------------------------------
 
-[[ $EUID -eq 0 ]] || die "Run as root: sudo bash install.sh"
+[[ $EUID -eq 0 ]] \
+    || die "Run as root: sudo bash install.sh"
 
 command -v docker >/dev/null 2>&1 \
     || die "Docker is required. EasyEngine normally installs it."
@@ -42,6 +47,9 @@ command -v iptables >/dev/null 2>&1 \
 
 command -v curl >/dev/null 2>&1 \
     || die "curl is required."
+
+command -v python3 >/dev/null 2>&1 \
+    || die "python3 is required."
 
 iptables --version | grep -q 'nf_tables' \
     || die "This installer expects iptables-nft. Current: $(iptables --version)"
@@ -57,24 +65,26 @@ fi
 
 log "Preparing CrowdSec installer files..."
 
-rm -rf "$DOWNLOAD_DIR"
-mkdir -p "$DOWNLOAD_DIR"
-
 download_file() {
     local file="$1"
     local dst="$DOWNLOAD_DIR/$file"
+    local url="$REPO_BASE_URL/$file"
 
     mkdir -p "$(dirname "$dst")"
 
     log "Downloading: $file"
 
     curl -fsSL \
-        "$REPO_BASE_URL/$file" \
+        --retry 3 \
+        --retry-delay 2 \
+        "$url" \
         -o "$dst" \
         || die "Failed to download repository file: $file"
 
     [[ -s "$dst" ]] \
         || die "Downloaded file is empty: $file"
+
+    log "Downloaded: $file"
 }
 
 download_file "docker-compose.yml.template"
@@ -179,15 +189,50 @@ copy_repo_file \
 
 log "Rendering docker-compose.yml..."
 
-sed \
-    "s|**NGINX_PROXY_LOG_DIR**|$NGINX_PROXY_LOG_DIR|g" \
+python3 \
     "$APP_DIR/docker-compose.yml.template" \
-    > "$APP_DIR/docker-compose.yml"
+    "$APP_DIR/docker-compose.yml" \
+    "$NGINX_PROXY_LOG_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+template_path = Path(sys.argv[1])
+output_path = Path(sys.argv[2])
+log_dir = sys.argv[3]
+
+content = template_path.read_text()
+
+placeholder = "**NGINX_PROXY_LOG_DIR**"
+
+if placeholder not in content:
+    raise SystemExit(
+        f"Template placeholder not found: {placeholder}"
+    )
+
+content = content.replace(placeholder, log_dir)
+
+output_path.write_text(content)
+PY
 
 chmod 0644 "$APP_DIR/docker-compose.yml"
 
+log "docker-compose.yml rendered successfully."
+
 # ---------------------------------------------------------------------------
-# 7. Initial firewall bouncer configuration
+# 7. Validate docker-compose configuration
+# ---------------------------------------------------------------------------
+
+log "Validating docker-compose.yml..."
+
+cd "$APP_DIR"
+
+docker compose config >/dev/null \
+    || die "docker-compose.yml validation failed."
+
+log "docker-compose.yml is valid."
+
+# ---------------------------------------------------------------------------
+# 8. Initial firewall bouncer configuration
 # ---------------------------------------------------------------------------
 
 if [[ ! -f "$APP_DIR/data-bouncers/fw-bouncer.yaml" ]]; then
@@ -229,17 +274,15 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Start CrowdSec agent only
+# 9. Start CrowdSec agent only
 # ---------------------------------------------------------------------------
 
 log "Starting CrowdSec agent only..."
 
-cd "$APP_DIR"
-
 docker compose up -d crowdsec
 
 # ---------------------------------------------------------------------------
-# 9. Wait for CrowdSec LAPI
+# 10. Wait for CrowdSec LAPI
 # ---------------------------------------------------------------------------
 
 log "Waiting for CrowdSec LAPI..."
@@ -260,8 +303,10 @@ done
 [[ "$lapi_ready" == true ]] \
     || die "CrowdSec LAPI did not become ready. Check: docker logs crowdsec"
 
+log "CrowdSec LAPI is ready."
+
 # ---------------------------------------------------------------------------
-# 10. Register firewall bouncer
+# 11. Register firewall bouncer
 # ---------------------------------------------------------------------------
 
 register_firewall_bouncer() {
@@ -271,8 +316,6 @@ register_firewall_bouncer() {
 
     local existing_key=""
     local key=""
-
-    # Check whether the configuration already contains a real API key.
 
     existing_key="$(
         awk -F': ' '/^api_key:/ {print $2; exit}' "$cfg" \
@@ -309,9 +352,32 @@ Then rerun install.sh."
     [[ -n "$key" ]] \
         || die "Could not create bouncer key for $name"
 
-    sed -i \
-        "s|^api_key:.*|api_key: $key|" \
-        "$cfg"
+    python3 \
+        "$cfg" \
+        "$key" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+key = sys.argv[2]
+
+content = path.read_text()
+
+lines = content.splitlines()
+
+updated = False
+
+for i, line in enumerate(lines):
+    if line.startswith("api_key:"):
+        lines[i] = f"api_key: {key}"
+        updated = True
+        break
+
+if not updated:
+    raise SystemExit("api_key entry not found in firewall bouncer config")
+
+path.write_text("\n".join(lines) + "\n")
+PY
 
     chmod 0600 "$cfg"
 
@@ -321,14 +387,16 @@ Then rerun install.sh."
 register_firewall_bouncer
 
 # ---------------------------------------------------------------------------
-# 11. Cloudflare Worker bouncer
+# 12. Cloudflare Worker bouncer
 # ---------------------------------------------------------------------------
 
 configure_cloudflare() {
 
     local answer
     local token
+    local generated
     local tmp
+    local cf_key
 
     read -r -p "Configure Cloudflare Worker bouncer? [y/N]: " answer
 
@@ -343,8 +411,6 @@ configure_cloudflare() {
     log "Generating Cloudflare Worker configuration..."
 
     tmp="$(mktemp)"
-
-    trap 'rm -f "$tmp"' RETURN
 
     docker run --rm \
         crowdsecurity/cloudflare-worker-bouncer:latest \
@@ -365,7 +431,9 @@ YAML
 
     rm -f "$tmp"
 
-    # Cloudflare Worker settings.
+    # -----------------------------------------------------------------------
+    # Cloudflare Worker settings
+    # -----------------------------------------------------------------------
 
     if grep -qE '^[[:space:]]*script_name:' \
         "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml"; then
@@ -398,9 +466,25 @@ YAML
     chmod 0600 \
         "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml"
 
-    # Register Cloudflare bouncer.
+    # -----------------------------------------------------------------------
+    # Register Cloudflare bouncer
+    # -----------------------------------------------------------------------
 
-    local cf_key
+    log "Registering Cloudflare bouncer in CrowdSec..."
+
+    if docker exec crowdsec cscli bouncers list 2>/dev/null \
+        | awk 'NR > 1 {print $1}' \
+        | grep -Fxq "cfworker"; then
+
+        die "Bouncer 'cfworker' already exists in CrowdSec.
+
+If the Cloudflare configuration is incomplete, remove it with:
+
+docker exec crowdsec cscli bouncers delete cfworker
+
+Then rerun install.sh."
+
+    fi
 
     cf_key="$(
         docker exec crowdsec cscli bouncers add cfworker -o raw
@@ -411,9 +495,33 @@ YAML
     [[ -n "$cf_key" ]] \
         || die "Could not create Cloudflare bouncer key."
 
-    sed -i \
-        "s|^[[:space:]]*lapi_key:.*|  lapi_key: $cf_key|" \
-        "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml"
+    python3 \
+        "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml" \
+        "$cf_key" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+key = sys.argv[2]
+
+content = path.read_text()
+
+lines = content.splitlines()
+
+updated = False
+
+for i, line in enumerate(lines):
+    if line.strip().startswith("lapi_key:"):
+        indent = line[:len(line) - len(line.lstrip())]
+        lines[i] = f"{indent}lapi_key: {key}"
+        updated = True
+        break
+
+if not updated:
+    raise SystemExit("lapi_key entry not found in Cloudflare bouncer config")
+
+path.write_text("\n".join(lines) + "\n")
+PY
 
     chmod 0600 \
         "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml"
@@ -428,7 +536,18 @@ YAML
 configure_cloudflare
 
 # ---------------------------------------------------------------------------
-# 12. Start stack
+# 13. Re-validate compose configuration
+# ---------------------------------------------------------------------------
+
+log "Validating final docker-compose.yml..."
+
+cd "$APP_DIR"
+
+docker compose config >/dev/null \
+    || die "Final docker-compose.yml validation failed."
+
+# ---------------------------------------------------------------------------
+# 14. Pull required images
 # ---------------------------------------------------------------------------
 
 log "Pulling required images..."
@@ -439,12 +558,16 @@ if [[ -f "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml" ]]; then
     docker compose pull cloudflare-worker-bouncer
 fi
 
+# ---------------------------------------------------------------------------
+# 15. Start full stack
+# ---------------------------------------------------------------------------
+
 log "Starting CrowdSec stack..."
 
 docker compose up -d
 
 # ---------------------------------------------------------------------------
-# 13. Wait for containers
+# 16. Wait for containers
 # ---------------------------------------------------------------------------
 
 sleep 8
@@ -453,37 +576,47 @@ log "Checking containers..."
 
 docker compose ps
 
+# ---------------------------------------------------------------------------
 # CrowdSec
+# ---------------------------------------------------------------------------
 
 docker inspect crowdsec \
     --format '{{.State.Status}}' \
     | grep -q '^running$' \
     || die "crowdsec is not running."
 
+# ---------------------------------------------------------------------------
 # Firewall bouncer
+# ---------------------------------------------------------------------------
 
 docker inspect crowdsec-fw-bouncer \
     --format '{{.State.Status}}' \
     | grep -q '^running$' \
-    || die "crowdsec-fw-bouncer is not running. Check:
+    || die "crowdsec-fw-bouncer is not running.
+
+Check:
 
 docker logs crowdsec-fw-bouncer --tail 100"
 
-# Cloudflare bouncer, if configured
+# ---------------------------------------------------------------------------
+# Cloudflare bouncer
+# ---------------------------------------------------------------------------
 
 if [[ -f "$APP_DIR/data-bouncers/cf-worker-bouncer.yaml" ]]; then
 
     docker inspect crowdsec-cf-worker-bouncer \
         --format '{{.State.Status}}' \
         | grep -q '^running$' \
-        || die "Cloudflare worker bouncer is not running. Check:
+        || die "Cloudflare worker bouncer is not running.
+
+Check:
 
 docker logs crowdsec-cf-worker-bouncer --tail 100"
 
 fi
 
 # ---------------------------------------------------------------------------
-# 14. Check registered bouncers
+# 17. Check registered bouncers
 # ---------------------------------------------------------------------------
 
 log "Checking registered bouncers..."
@@ -491,12 +624,13 @@ log "Checking registered bouncers..."
 docker exec crowdsec cscli bouncers list || true
 
 # ---------------------------------------------------------------------------
-# 15. Install convenient cscli alias
+# 18. Install convenient cscli alias
 # ---------------------------------------------------------------------------
 
 BASHRC="/root/.bashrc"
 
-if ! grep -qF "alias cscli='docker exec -t crowdsec cscli'" "$BASHRC" 2>/dev/null; then
+if ! grep -qF "alias cscli='docker exec -t crowdsec cscli'" \
+    "$BASHRC" 2>/dev/null; then
 
     printf "\n# CrowdSec\nalias cscli='docker exec -t crowdsec cscli'\n" \
         >> "$BASHRC"
@@ -504,7 +638,7 @@ if ! grep -qF "alias cscli='docker exec -t crowdsec cscli'" "$BASHRC" 2>/dev/nul
 fi
 
 # ---------------------------------------------------------------------------
-# 16. Write installation status
+# 19. Write installation status
 # ---------------------------------------------------------------------------
 
 cat > "$APP_DIR/STATUS.md" <<EOF
@@ -550,13 +684,7 @@ Test a temporary CrowdSec decision from another network before disabling Fail2ba
 EOF
 
 # ---------------------------------------------------------------------------
-# 17. Cleanup
-# ---------------------------------------------------------------------------
-
-rm -rf "$DOWNLOAD_DIR"
-
-# ---------------------------------------------------------------------------
-# 18. Finish
+# 20. Finish
 # ---------------------------------------------------------------------------
 
 log "Installation complete."
@@ -570,4 +698,3 @@ echo "  docker exec -t crowdsec cscli metrics"
 echo
 echo "IMPORTANT:"
 echo "Test a temporary decision from another network before disabling Fail2ban."
-```
