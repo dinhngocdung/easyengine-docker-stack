@@ -37,6 +37,13 @@ buộc cho `cf-worker-bouncer`, vì binary đó không tự đọc biến môi t
 ## Cài đặt
 
 ```bash
+curl -fsSL -o crowdsec.tar.gz \
+  https://github.com/dinhngocdung/easyengine-docker-stack/releases/latest/download/crowdsec.tar.gz
+mkdir crowdsec && tar xzf crowdsec.tar.gz -C crowdsec
+cd crowdsec && sudo ./install.sh
+```
+Hoặc
+```bash
 git clone https://github.com/dinhngocdung/easyengine-docker-stack.git
 cd easyengine-docker-stack/crowdsec
 sudo ./install.sh
