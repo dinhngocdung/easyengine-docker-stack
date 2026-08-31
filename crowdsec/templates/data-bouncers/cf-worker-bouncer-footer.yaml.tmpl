@@ -1,0 +1,20 @@
+          token: ${CLOUDFLARE_API_TOKEN}
+          account_name: ${CLOUDFLARE_ACCOUNT_NAME}
+crowdsec_config:
+    lapi_url: http://crowdsec:8080/
+    lapi_key: ${CROWDSEC_CF_BOUNCER_KEY}
+    update_frequency: 10s
+    include_scenarios_containing: []
+    exclude_scenarios_containing: []
+    only_include_decisions_from: ["crowdsec"]
+    key_path: ""
+    cert_path: ""
+    ca_cert_path: ""
+daemon: false
+log_level: info
+log_mode: stdout
+log_dir: ""
+prometheus:
+    enabled: false
+    listen_addr: 0.0.0.0
+    listen_port: "2112"

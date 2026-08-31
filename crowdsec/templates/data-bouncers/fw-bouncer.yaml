@@ -1,0 +1,10 @@
+mode: iptables
+pid_dir: /var/run/
+update_frequency: 10s
+api_url: ${API_URL}
+api_key: ${API_KEY}
+log_mode: stdout
+log_level: info
+iptables_chains:
+  - INPUT
+  - DOCKER-USER

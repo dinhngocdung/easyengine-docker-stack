@@ -1,320 +1,94 @@
-# CrowdSec Docker for EasyEngine
+# CrowdSec cho EasyEngine — template + script triển khai
 
-Thay thế Fail2ban trên **EasyEngine v4 + Docker** bằng CrowdSec với hai lớp remediation:
+Thay thế fail2ban. `install.sh` chỉ lo triển khai — mọi nội dung cấu hình
+thật nằm trong `templates/`, sửa ở đó để đổi hành vi, không sửa script.
 
-- **Firewall bouncer**: chặn tại host bằng `iptables` + `DOCKER-USER`.
-- **Cloudflare Worker bouncer**: block/captcha tại Cloudflare edge cho các zone chạy proxy.
+## Cấu trúc
 
-CrowdSec chạy hoàn toàn trong Docker.
-
-## Quick install
-
-Trên server EasyEngine:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/main/crowdsec/install.sh -o /tmp/install-crowdsec.sh
-sudo bash /tmp/install-crowdsec.sh
 ```
-
-> Sau khi tạo repository thật, thay `dinhngocdung` bằng GitHub username/org của bạn.
-
-Hoặc:
-
-```bash
-wget -qO /tmp/install-crowdsec.sh https://raw.githubusercontent.com/dinhngocdung/easyengine-docker-stack/main/crowdsec/install.sh
-sudo bash /tmp/install-crowdsec.sh
-```
-
-Installer sẽ:
-
-1. kiểm tra Docker/Compose/iptables;
-2. tự phát hiện log `nginx-proxy` của EasyEngine;
-3. tạo `/opt/crowdsec`;
-4. tạo CrowdSec + firewall bouncer;
-5. đăng ký firewall bouncer với LAPI;
-6. tùy chọn cấu hình Cloudflare Worker bouncer;
-7. build/start stack;
-8. chạy health checks;
-9. in các lệnh quản trị tiếp theo.
-
-## Kiến trúc
-
-```text
-Internet
-   |
-   +--> Cloudflare Worker bouncer (nếu proxy ON)
-   |        block / captcha
-   |
-   v
-EasyEngine global nginx proxy
-   |
-   v
-DOCKER-USER / INPUT
-   |
-   +--> CrowdSec firewall bouncer
-   |
-   v
-WordPress site containers
-
-CrowdSec agent
-   +--> nginx-proxy access/error logs
-   +--> /var/log/secure
-   +--> scenarios / collections
-   |
-   +--> LAPI
-          +--> firewall bouncer
-          +--> Cloudflare Worker bouncer
-```
-
-## Yêu cầu
-
-- EasyEngine v4 đã cài Docker + Docker Compose v2.
-- Host dùng iptables-nft (`iptables --version` có `nf_tables`).
-- `DOCKER-USER` tồn tại nếu muốn chặn traffic vào container.
-- Cloudflare Worker bouncer là **tùy chọn**.
-- Nếu dùng Cloudflare Worker bouncer, Cloudflare account cần quyền API phù hợp. Với phiên bản bouncer hiện tại, Analytics Engine được dùng cho metrics; token nên có `Account Analytics: Read`. Analytics Engine phải khả dụng nếu muốn metrics đầy đủ.
-
-## Files
-
-```text
-.
-├── install.sh
+crowdsec/
+├── install.sh                              ← chỉ đọc input + triển khai, không sinh YAML
 ├── README.md
-├── LICENSE
-├── .gitignore
-├── docker-compose.yml.template
-├── config
-│   ├── acquis.d
-│   │   ├── nginx-proxy.yaml
-│   │   └── sshd.yaml
-│   └── parsers
-│       └── s02-enrich
-│           └── whitelists.yaml
-└── fw-bouncer
-    └── Dockerfile
+└── templates/
+    ├── docker-compose.yml                  ← tĩnh, Compose tự thay ${VAR} từ .env
+    ├── acquis-nginx-proxy.yaml             ← tĩnh
+    ├── acquis-host-auth.yaml               ← tĩnh
+    ├── whitelists.yaml                     ← SỬA TRỰC TIẾP khi cần thêm IP tin cậy
+    ├── fw-bouncer.yaml                      ← tĩnh, image tự envsubst lúc chạy
+    ├── cf-worker-bouncer-header.yaml.tmpl   ← script render (chứa placeholder)
+    ├── cf-worker-bouncer-zones.yaml         ← SỬA TRỰC TIẾP khi thêm/bớt site
+    └── cf-worker-bouncer-footer.yaml.tmpl   ← script render (chứa placeholder)
 ```
 
-Runtime data/config được tạo ở:
+## Nguyên tắc: sửa gì ở đâu
 
-```text
-/opt/crowdsec/
-├── docker-compose.yml
-├── config/
-├── data/
-├── data-bouncers/
-└── fw-bouncer/
-```
+| Muốn đổi | Sửa file | Cần chạy lại `install.sh`? |
+|---|---|---|
+| Thêm site mới (Cloudflare) | `templates/cf-worker-bouncer-zones.yaml` | Có |
+| Thêm IP/CIDR tin cậy | `templates/whitelists.yaml` | Không — chỉ cần `docker compose restart crowdsec` |
+| Đổi collection CrowdSec | Chạy `install.sh`, nhập lại khi được hỏi | Có |
+| Đổi image `fw-bouncer` | Chạy `install.sh`, nhập lại khi được hỏi | Có |
+| Đổi cấu trúc file compose | `templates/docker-compose.yml` | Có |
 
-## Cloudflare Worker
+`install.sh` không có logic sinh nội dung YAML nào (trừ 1 bước `envsubst` bắt
+buộc cho `cf-worker-bouncer`, vì binary đó không tự đọc biến môi trường được
+— xem comment trong `cf-worker-bouncer-header.yaml.tmpl`).
 
-Installer hỏi:
-
-```text
-Configure Cloudflare Worker bouncer? [y/N]
-```
-
-Nếu chọn `y`, nhập Cloudflare API token.
-
-Installer dùng chính binary của Cloudflare Worker bouncer để sinh config:
+## Cài đặt
 
 ```bash
-docker run --rm crowdsecurity/cloudflare-worker-bouncer:latest \
-  -g "$CLOUDFLARE_API_TOKEN"
+git clone https://github.com/dinhngocdung/easyengine-docker-stack.git
+cd easyengine-docker-stack/crowdsec
+sudo ./install.sh
 ```
 
-Sau đó installer giữ lại config cho các zone mà token nhìn thấy. **Kiểm tra lại zone trước khi bật production**.
+**Không tách `install.sh` ra khỏi `templates/`** — script tự dò
+`templates/` nằm cạnh chính nó (`$(dirname "${BASH_SOURCE[0]}")`), không
+hoạt động nếu chỉ tải mỗi `install.sh`.
 
-Cloudflare Worker chỉ có tác dụng khi DNS record đang proxied qua Cloudflare.
-
-Cloudflare Worker bouncer hiện được CrowdSec duy trì. Bouncer sử dụng Worker/KV và có thể dùng Analytics Engine cho metrics; CrowdSec khuyến nghị chú ý quota/plan khi triển khai, đặc biệt nếu bảo vệ nhiều zone.
-
-## Bảo mật secrets
-
-Không commit:
-
-```text
-data-bouncers/*.yaml
-.env
-```
-
-API keys được ghi vào `/opt/crowdsec/data-bouncers/` và file được chmod `600`.
-
-Nếu repository public, tuyệt đối không đưa token Cloudflare hoặc CrowdSec bouncer key vào Git.
-
-## Sau khi cài
-
-Alias được tạo trong root shell:
+## Thêm site mới — không cần hỏi script gì cả
 
 ```bash
-alias cscli='docker exec -t crowdsec cscli'
+cd easyengine-docker-stack/crowdsec
+vi templates/cf-worker-bouncer-zones.yaml    # copy khối ví dụ, đổi zone_id + domain
+sudo ./install.sh                             # Enter qua hết các câu hỏi để giữ nguyên giá trị cũ
 ```
 
-Có thể dùng:
+## Secret — không bao giờ nằm trong `templates/`
 
-```bash
-cscli metrics
-cscli alerts list
-cscli decisions list
-cscli bouncers list
-cscli lapi status
-cscli version
+Toàn bộ giá trị nhạy cảm (API token, key bouncer, đường dẫn log riêng từng
+server) chỉ sống trong `/opt/crowdsec/.env` (chmod 600, sinh ra khi chạy
+`install.sh`, KHÔNG commit lên git). File `templates/*.tmpl` chỉ chứa cú
+pháp `${VAR}`, không bao giờ chứa giá trị thật — an toàn để repo public.
+
+Thêm `.gitignore` ở gốc repo (nếu chưa có):
+```
+crowdsec/.env
+*.env
 ```
 
-### Ban thủ công
+## Cloudflare Worker bouncer — bắt buộc bật Analytics Engine trước
 
-```bash
-cscli decisions add --ip 1.2.3.4 --duration 24h -R "manual-ban"
-```
+Thủ công 1 lần trên Dashboard trước khi chạy `install.sh` với Cloudflare
+bật — script sẽ hỏi xác nhận nhưng không tự kiểm tra được. Thiếu bước này,
+`cloudflare-worker-bouncer` crash-loop lỗi `10089`.
 
-### Bỏ ban
-
-```bash
-cscli decisions delete --ip 1.2.3.4
-```
-
-### Test firewall bouncer
-
-Từ một mạng khác với server:
-
-```bash
-cscli decisions add --ip YOUR_PUBLIC_IP --duration 2m -R "test"
-curl -I https://your-domain.com
-cscli decisions delete --ip YOUR_PUBLIC_IP
-```
-
-Không test từ chính server vì traffic local không đi theo cùng path.
-
-### Kiểm tra containers
+## Update
 
 ```bash
 cd /opt/crowdsec
-docker compose ps
-docker logs crowdsec --tail 100
-docker logs crowdsec-fw-bouncer --tail 100
-docker logs crowdsec-cf-worker-bouncer --tail 100
+docker exec -t crowdsec cscli hub update && docker exec -t crowdsec cscli hub upgrade
+docker compose pull && docker compose up -d
 ```
+`fw-bouncer` giờ dùng image dựng sẵn (`ghcr.io/shgew/cs-firewall-bouncer-docker`,
+tự động rebuild theo mỗi bản CrowdSec mới) — `docker compose pull` là đủ,
+không cần `build` nữa.
 
-## Khi thêm site EasyEngine
-
-### Firewall
-
-Thông thường **không cần đổi gì**.
-
-EasyEngine dùng global nginx proxy, vì vậy site mới tiếp tục ghi log vào cùng log source mà CrowdSec đang đọc. Firewall bouncer chặn theo source IP nên tự bảo vệ site mới.
-
-Nếu site mới có IP/CIDR tin cậy riêng, thêm vào:
-
-```text
-/opt/crowdsec/config/parsers/s02-enrich/whitelists.yaml
-```
-
-Sau đó:
+## Kiểm chứng sau khi cài
 
 ```bash
-cd /opt/crowdsec
-docker compose restart crowdsec
+docker exec -t crowdsec cscli bouncers list      # fw (+ cfworker nếu bật) phải "Valid ✔️"
+docker exec -t crowdsec cscli decisions add --ip <IP_của_bạn> --duration 2m -R test
+curl -I https://<domain>                          # từ mạng khác — phải bị chặn/timeout
+docker exec -t crowdsec cscli decisions delete --ip <IP_của_bạn>
 ```
-
-### Cloudflare
-
-Nếu site mới nằm sau Cloudflare, cần thêm zone vào:
-
-```text
-/opt/crowdsec/data-bouncers/cf-worker-bouncer.yaml
-```
-
-Sau đó:
-
-```bash
-cd /opt/crowdsec
-docker compose restart cloudflare-worker-bouncer
-```
-
-Kiểm tra:
-
-```bash
-docker logs crowdsec-cf-worker-bouncer --tail 100
-```
-
-## Fail2ban migration
-
-Không nên gỡ Fail2ban ngay.
-
-Khuyến nghị:
-
-```bash
-systemctl stop fail2ban
-systemctl disable fail2ban
-```
-
-Giữ `/opt/fail2ban` một thời gian để đối chiếu log/config cũ.
-
-## Backup
-
-```bash
-tar czf /opt/crowdsec-backup-$(date +%F).tar.gz \
-  -C /opt/crowdsec \
-  config data data-bouncers docker-compose.yml fw-bouncer
-```
-
-## Restore
-
-```bash
-cd /opt/crowdsec
-docker compose down
-# restore config/data/data-bouncers từ backup
-docker compose up -d
-```
-
-## Troubleshooting
-
-### `exec format error`
-
-Script bị CRLF:
-
-```bash
-sed -i 's/\r$//' install.sh
-```
-
-### Bouncer đã tồn tại
-
-```bash
-cscli bouncers list
-cscli bouncers delete NAME
-```
-
-### Firewall bouncer không chặn container
-
-Kiểm tra:
-
-```bash
-iptables --version
-iptables -S DOCKER-USER
-cscli bouncers list
-docker logs crowdsec-fw-bouncer --tail 100
-```
-
-`DOCKER-USER` phải có trong `iptables_chains`.
-
-### Cloudflare Worker lỗi Analytics Engine
-
-Kiểm tra Analytics Engine trong Cloudflare account và xem:
-
-```bash
-docker logs crowdsec-cf-worker-bouncer --tail 200
-```
-
-### SSH parser không phát hiện đủ
-
-Theo dõi:
-
-```bash
-cscli metrics
-cscli alerts list
-```
-
-Nếu pattern SSH thực tế không được collection mặc định bắt, tạo parser/scenario riêng sau khi có log thực tế. Không nên thêm parser tùy chỉnh chỉ dựa trên giả định.
-
-## License
-
-MIT

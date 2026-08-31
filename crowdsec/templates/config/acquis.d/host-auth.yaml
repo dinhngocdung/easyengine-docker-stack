@@ -1,4 +1,4 @@
 filenames:
-  - /var/log/secure
+  - /var/log/host-auth
 labels:
   type: syslog

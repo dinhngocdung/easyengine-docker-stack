@@ -1,0 +1,10 @@
+name: crowdsecurity/whitelists
+description: "Internal ranges + trusted sources"
+whitelist:
+  reason: "internal + trusted"
+  cidr:
+    - "127.0.0.1/8"
+    - "::1/128"
+    # Thêm CIDR nội bộ / nguồn tin cậy khác tại đây khi cần, ví dụ:
+    # - "10.0.0.0/20"
+    # - "10.1.0.0/16"
