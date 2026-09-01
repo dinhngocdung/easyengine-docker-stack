@@ -7,6 +7,8 @@ IFS=$'\n\t'
 
 INSTALL_DIR="/opt/crowdsec"
 DRY_RUN=0
+ASSUME_YES=0
+SKIP_CLOUDFLARE=0
 INSTALL_CLOUDFLARE=0
 ENABLE_CLOUDFLARE=0
 CF_TOKEN="${CLOUDFLARE_TOKEN:-}"
@@ -29,9 +31,13 @@ Usage: sudo bash install-crowdsec-easyengine.sh [options]
 
   --apply                 Make changes (required; otherwise no change is made)
   --dry-run               Show the checks and intended actions without changing the host
+  --yes                   Do not ask for the final installation confirmation
+  --no-cloudflare         Install only CrowdSec + the local firewall bouncer
   --cf                    Also install the Cloudflare Worker bouncer
   --token=TOKEN, --cloudflare-token TOKEN
                           Non-interactive Cloudflare API token (prefer prompt or env var)
+  --domain=DOMAIN[,DOMAIN...]
+                          Only retain these generated Cloudflare zones
   --domain=DOMAIN[,DOMAIN...|all]
                           Cloudflare zones to retain; "all" retains every generated zone
   --refresh-cloudflare    Regenerate Cloudflare config; saves a timestamped backup first
@@ -60,6 +66,8 @@ while (($#)); do
   case "$1" in
     --apply) DRY_RUN=0; APPLY=1 ;;
     --dry-run) DRY_RUN=1 ;;
+    --yes) ASSUME_YES=1 ;;
+    --no-cloudflare) SKIP_CLOUDFLARE=1 ;;
     --yes) : ;; # Backward compatible: installation no longer asks for confirmation.
     --no-cloudflare) warn "--no-cloudflare is unnecessary; Cloudflare is off unless --cf is provided." ;;
     --cf) INSTALL_CLOUDFLARE=1 ;;
@@ -182,6 +190,7 @@ valid_cidr() {
 
 render_whitelist() {
   local cidr
+  local cidr trusted_list=${TRUSTED_CIDRS//,/ }
   {
     cat <<'EOF'
 name: crowdsecurity/whitelists
@@ -192,6 +201,8 @@ whitelist:
 EOF
     while IFS= read -r cidr; do printf '    - "%s"\n' "$cidr"; done <<<"$DEFAULT_CIDRS"
     for cidr in ${TRUSTED_CIDRS//,/ }; do
+    local IFS=$' \t\n'
+    for cidr in $trusted_list; do
       valid_cidr "$cidr" || die "Invalid trusted CIDR: $cidr"
       printf '    - "%s"\n' "$cidr"
     done
@@ -292,6 +303,10 @@ hosted_sites() {
 normalise_domains() {
   local domain cleaned=() item
   for item in ${1//,/ }; do
+  local domain cleaned=() item domain_list=$1
+  domain_list=${domain_list//,/ }
+  local IFS=$' \t\n'
+  for item in $domain_list; do
     domain=${item,,}
     [[ $domain == \*.* ]] && domain=${domain:2}
     [[ $domain =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] || die "Invalid domain: $item"
@@ -346,11 +361,14 @@ rewrite_cloudflare_config() {
     function begin_zone(s,    p, zone_name) {
       in_zone=1; zone_indent=indentation(s); zone_lines=1; zone[1]=s; seen++
       p=index(s, "#"); zone_name=(p ? trim(substr(s, p+1)) : "")
+      keep_zone=(tolower(zone_name) in wanted)
       keep_zone=(keep_all || tolower(zone_name) in wanted)
     }
     BEGIN {
       keep_all=(tolower(domains) == "all")
       if (!keep_all) {
+      split(domains, entries, ",")
+      for (i in entries) wanted[tolower(entries[i])]=1
         split(domains, entries, ",")
         for (i in entries) wanted[tolower(entries[i])]=1
       }
@@ -384,8 +402,12 @@ rewrite_cloudflare_config() {
 }
 
 configure_cloudflare() {
+  ((SKIP_CLOUDFLARE)) && return
   ((INSTALL_CLOUDFLARE)) || { log "Cloudflare Worker bouncer skipped (use --cf to install it)."; return; }
   if [[ -z $CF_TOKEN && -t 0 ]]; then
+    printf 'Configure the Cloudflare Worker bouncer now? [y/N] '
+    local choice; read -r choice
+    [[ $choice =~ ^[Yy]$ ]] || return
     printf 'Cloudflare API token (input is hidden): '
     read -r -s CF_TOKEN; printf '\n'
   fi
@@ -507,6 +529,12 @@ main() {
     log "Dry run complete. Re-run with --apply to install."
     return
   fi
+  if (( ! ASSUME_YES )); then
+    printf 'This will create missing files under %s and start a firewall bouncer that manages INPUT and DOCKER-USER chains. Continue? [y/N] ' "$INSTALL_DIR"
+    local answer; read -r answer
+    [[ $answer =~ ^[Yy]$ ]] || { log "Cancelled. No files were created."; return; }
+  fi
+
   create_base_files
   create_cscli_shortcut
   configure_cloudflare
@@ -525,6 +553,7 @@ main() {
     fi
   fi
   compose up -d
+  ((ENABLE_CLOUDFLARE)) && compose --profile cloudflare up -d cloudflare-worker-bouncer
   ((ENABLE_CLOUDFLARE)) && start_cloudflare_worker
   verify
   log "Installation completed. Existing config and data were never overwritten."
