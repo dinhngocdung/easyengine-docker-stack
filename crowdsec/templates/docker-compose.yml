@@ -13,12 +13,15 @@ services:
       - ./data:/var/lib/crowdsec/data
       - ${CROWDSEC_SSHD_LOG_PATH}:/var/log/host-auth:ro
       - ${CROWDSEC_NGINX_PROXY_LOG_DIR}:/var/log/nginx-proxy:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 
-  fw-bouncer:
+  crowdsec-firewall-bouncer:
     image: ${FW_BOUNCER_IMAGE}
-    container_name: crowdsec-fw-bouncer
-    network_mode: "host"
+    container_name: crowdsec-firewall-bouncer
+    network_mode: host
+    # Chạy non-root cần: user: "1000:1000" và bỏ security_opt bên dưới
+    # (no-new-privileges chặn luôn file capabilities cần cho non-root).
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -30,14 +33,16 @@ services:
       API_URL: ${CROWDSEC_FW_API_URL}
       API_KEY: ${CROWDSEC_FW_BOUNCER_KEY}
     volumes:
-      - ./data-bouncers/fw-bouncer.yaml:/config/crowdsec-firewall-bouncer.yaml:ro
+      - ./data-bouncers/crowdsec-firewall-bouncer.yaml:/config/crowdsec-firewall-bouncer.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 
-  cloudflare-worker-bouncer:
+  crowdsec-cloudflare-worker-bouncer:
     image: crowdsecurity/cloudflare-worker-bouncer:latest
-    container_name: crowdsec-cf-worker-bouncer
+    container_name: crowdsec-cloudflare-worker-bouncer
     depends_on:
       - crowdsec
     volumes:
-      - ./data-bouncers/cf-worker-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-cloudflare-worker-bouncer.yaml:ro
+      - ./data-bouncers/crowdsec-cloudflare-worker-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-cloudflare-worker-bouncer.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
