@@ -6,7 +6,7 @@ services:
       - ${VOLUME_EE_SOURCE}:/mnt/source/easyengine               # Backup EasyEngine directories
       - ${VOLUME_DOCKER_VOLUMES}:/mnt/source/volumes             # Backup Docker volumes
       - ${VOLUME_BORGMATIC_CONFIG_SOURCE}:/mnt/source/borgmatic  # Backup Borgmatic config
-      - ${VOLUME_FAIL2BAN_CONFIG_SOURCE}:/mnt/source/fail2ban    # Backup Fail2Ban config
+      - ${VOLUME_CROWDSEC_CONFIG_SOURCE}:/mnt/source/crowdsec    # Backup CrowdSec config
       - ${VOLUME_CRONTAB_SOURCE}:/mnt/source/crontab             # Backup Crontab files
       - ${VOLUME_RESTORE_DESTINATION}:/restore                   # Restore destination directory
       - ${VOLUME_BORG_REPOSITORY}:/mnt/borg-repository           # Borg repository management
