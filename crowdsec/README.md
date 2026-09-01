@@ -4,6 +4,38 @@
 
 The script never overwrites existing configuration, CrowdSec data, or bouncer keys. Re-running it is safe: it keeps existing files and only creates missing ones. It also accepts CRLF downloads by re-executing a sanitized temporary copy.
 
+Dựa trên nội dung mã nguồn của tệp [install-crowdsec-easyengine.sh](https://github.com/dinhngocdung/easyengine-docker-stack/blob/main/crowdsec/install-crowdsec-easyengine.sh) bạn đang xem và chia sẻ, cấu trúc hệ thống CrowdSec Docker Stack được định nghĩa chính xác với các thành phần kỹ thuật sau:
+
+
+## Kiến trúc 3 Container (`docker-compose.yml`)
+
+* **`crowdsec` (Security Engine)**
+  **Image:** `crowdsecurity/crowdsec:latest`
+  **Tác dụng:** Đóng vai trò là trung tâm phân tích nhật ký (Central Security Engine). Kích hoạt sẵn các collections: `crowdsecurity/nginx`, `crowdsecurity/sshd`, `crowdsecurity/linux`, và `crowdsecurity/wordpress`. Đồng thời ánh xạ các thư mục cấu hình, dữ liệu và mount trực tiếp luồng log hệ thống (`/var/log/secure`) cùng thư mục log Nginx Proxy (`${NGINX_LOG_DIR}`).
+  
+  
+* **`firewall-bouncer` (Network Bouncer)**
+  **Image:** `ghcr.io/shgew/cs-firewall-bouncer-docker:stable`
+  **Tác dụng:** Chạy ở chế độ `network_mode: host` với các quyền kiểm soát mạng cấp kernel (`NET_ADMIN`, `NET_RAW`). Có nhiệm vụ đồng bộ các quyết định từ LAPI của CrowdSec để tự động thiết lập luật chặn trực tiếp trên tường lửa hệ thống (iptables/nftables) ngay khi phát hiện IP độc hại.
+
+
+* **`cloudflare-worker-bouncer` (Edge Bouncer)**
+  **Image:** `crowdsecurity/cloudflare-worker-bouncer:latest`
+  **Tác dụng:** Được quản lý theo profile riêng (`cloudflare`). Đảm nhận việc chặn lọc hoặc thách thức các request độc hại ngay từ biên mạng của Cloudflare dựa trên cấu hình tích hợp, ngăn chặn từ xa trước khi request chạm tới máy chủ gốc.
+
+
+## Cấu hình Theo dõi và Phân tích Nhật ký (Log Parsers / Collections)
+
+Hệ thống cấu hình sẵn các cơ chế bóc tách luồng log thông qua các thành phần (Collections):
+
+* **`crowdsecurity/nginx` & `crowdsecurity/wordpress` (Nginx & WordPress Logs):**
+  *Tác dụng:* Phân tích nhật ký truy cập và lỗi từ hệ thống Nginx Proxy/EasyEngine để phát hiện các hành vi quét mã độc, dò mật khẩu ứng dụng WordPress, tấn công chèn mã (SQLi, XSS) hoặc brute-force trang đăng nhập.
+
+
+* **`crowdsecurity/sshd` & `crowdsecurity/linux` (System & SSH Logs):**
+  *Tác dụng:* Giám sát nhật ký bảo mật hệ thống (`/var/log/secure`) để phát hiện kịp thời các cuộc tấn công dò mật khẩu SSH, truy cập trái phép hoặc các dấu hiệu bất thường ở tầng hệ điều hành.
+
+  
 ## Before running
 
 - Run on the target EasyEngine host as root (via `sudo`). Docker and Docker Compose must already work.
