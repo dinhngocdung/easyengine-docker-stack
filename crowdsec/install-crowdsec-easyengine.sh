@@ -116,6 +116,7 @@ detect_nginx_logs() {
     [[ -d $NGINX_LOG_DIR ]] || die "NGINX_LOG_DIR does not exist: $NGINX_LOG_DIR"
     return
   fi
+
   local candidate
   for candidate in \
     /opt/easyengine/services/nginx-proxy/logs \
@@ -123,8 +124,6 @@ detect_nginx_logs() {
     if [[ -d $candidate ]]; then NGINX_LOG_DIR=$candidate; return; fi
   done
 
-  # EasyEngine normally uses this directory. Inspecting containers is a fallback
-  # only; a guessed mount is never silently used.
   local container mounts
   while IFS= read -r container; do
     mounts=$(docker inspect "$container" --format '{{range .Mounts}}{{println .Source .Destination}}{{end}}' 2>/dev/null || true)
@@ -135,7 +134,13 @@ detect_nginx_logs() {
       return
     fi
   done < <(docker ps --format '{{.Names}}' | awk '/nginx.*proxy|proxy.*nginx/')
-  die "Could not find EasyEngine nginx-proxy logs. Re-run with --nginx-log-dir PATH."
+
+  NGINX_LOG_DIR="/opt/easyengine/services/nginx-proxy/logs"
+  warn "Could not find EasyEngine nginx-proxy logs (no site created yet?)."
+  warn "Defaulting to $NGINX_LOG_DIR and creating it now."
+  warn "HTTP protection starts working automatically once EasyEngine writes logs"
+  warn "there (e.g. after 'ee site create') — no need to re-run this installer."
+  run mkdir -p "$NGINX_LOG_DIR"
 }
 
 write_if_missing() {
