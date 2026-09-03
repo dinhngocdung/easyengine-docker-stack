@@ -1,0 +1,11 @@
+name: crowdsecurity/whitelists
+description: "Internal EasyEngine ranges + trusted sources"
+whitelist:
+  reason: "internal EasyEngine ranges and explicitly trusted sources"
+  cidr:
+    - "127.0.0.1/8"
+    - "::1/128"
+    - "10.0.0.0/20"
+    - "10.1.0.0/16"
+    - "10.2.0.0/16"
+# Additional trusted CIDRs from TRUSTED_CIDRS (comma- or space-separated) will be appended by the installer.

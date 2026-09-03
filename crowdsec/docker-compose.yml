@@ -1,0 +1,37 @@
+name: crowdsec
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    environment:
+      COLLECTIONS: "crowdsecurity/nginx crowdsecurity/sshd crowdsecurity/linux crowdsecurity/wordpress"
+      TZ: "${TZ:-Asia/Ho_Chi_Minh}"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./config:/etc/crowdsec
+      - ./data:/var/lib/crowdsec/data
+      - /var/log/secure:/var/log/secure:ro
+      - ${NGINX_LOG_DIR}:/var/log/nginx-proxy:ro
+    restart: unless-stopped
+
+  firewall-bouncer:
+    image: ghcr.io/shgew/cs-firewall-bouncer-docker:stable
+    container_name: crowdsec-firewall-bouncer
+    network_mode: host
+    cap_add: [NET_ADMIN, NET_RAW]
+    security_opt: [no-new-privileges:true]
+    depends_on: [crowdsec]
+    volumes:
+      - ./data-bouncers/firewall-bouncer.yaml:/config/crowdsec-firewall-bouncer.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+
+  cloudflare-worker-bouncer:
+    profiles: [cloudflare]
+    image: crowdsecurity/cloudflare-worker-bouncer:latest
+    container_name: crowdsec-cloudflare-worker-bouncer
+    depends_on: [crowdsec]
+    volumes:
+      - ./data-bouncers/cloudflare-worker-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-cloudflare-worker-bouncer.yaml:ro
+    restart: unless-stopped
