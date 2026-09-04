@@ -271,6 +271,7 @@ services:
     depends_on: [crowdsec]
     volumes:
       - ./data-bouncers/cloudflare-worker-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-cloudflare-worker-bouncer.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
 EOF
 }
